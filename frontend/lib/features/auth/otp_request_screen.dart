@@ -28,6 +28,9 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
   // True once the user has signed in with Google but their Firebase account
   // has no phone number linked yet - they need to verify one to finish.
   bool _googlePending = false;
+  // The Google button can only be rendered once GoogleSignIn.initialize()
+  // has resolved - rendering it earlier can leave it blank/broken.
+  bool _googleReady = false;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _googleSub;
 
   @override
@@ -37,12 +40,17 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
   }
 
   Future<void> _initGoogleSignIn() async {
-    final signIn = GoogleSignIn.instance;
-    await signIn.initialize(clientId: googleSignInWebClientId);
-    _googleSub = signIn.authenticationEvents.listen(
-      _handleGoogleAuthEvent,
-      onError: (Object e) => setState(() => _error = e.toString()),
-    );
+    try {
+      final signIn = GoogleSignIn.instance;
+      await signIn.initialize(clientId: googleSignInWebClientId);
+      _googleSub = signIn.authenticationEvents.listen(
+        _handleGoogleAuthEvent,
+        onError: (Object e) => setState(() => _error = e.toString()),
+      );
+      if (mounted) setState(() => _googleReady = true);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Google sign-in unavailable: $e');
+    }
   }
 
   Future<void> _handleGoogleAuthEvent(GoogleSignInAuthenticationEvent event) async {
@@ -124,7 +132,7 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                       : 'Enter your phone number to continue',
                 ),
                 const SizedBox(height: 24),
-                if (!_googlePending && kIsWeb) ...[
+                if (!_googlePending && kIsWeb && _googleReady) ...[
                   Center(child: gsi_button.renderButton()),
                   const SizedBox(height: 16),
                   const Row(
