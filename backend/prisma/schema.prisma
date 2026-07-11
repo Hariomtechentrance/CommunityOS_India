@@ -1,0 +1,450 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  SUPER_ADMIN
+  COMMITTEE_ADMIN
+  SECURITY
+  RESIDENT
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum PostType {
+  GENERAL
+  QUESTION
+  RECOMMENDATION
+  LOST_FOUND
+}
+
+enum ListingCategory {
+  ITEM_SALE
+  ITEM_FREE
+  ITEM_RENT
+  PROPERTY_SALE
+  PROPERTY_RENT
+}
+
+enum ListingStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum RsvpStatus {
+  GOING
+  MAYBE
+  NOT_GOING
+}
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  // Location profile - filled in once, right after login, via
+  // PATCH /users/me/location. Nullable so login still works before it's set.
+  addressLine String?
+  city        String?
+  state       String?
+  pincode     String?
+  area        String?
+  latitude    Float?
+  longitude   Float?
+
+  // Web Push registration token for emergency alerts (PATCH /users/me/fcm-token).
+  // Single most-recent token per user - fine at this stage, multi-device is later.
+  fcmToken String?
+
+  memberships       Membership[]
+  authoredNotices   Notice[]
+  raisedComplaints  Complaint[]
+  posts             Post[]
+  comments          Comment[]
+  polls             Poll[]
+  pollVotes         PollVote[]
+  events            Event[]
+  listings          Listing[]
+  eventRsvps        EventRsvp[]
+  areaPosts         AreaPost[]
+  areaPostInterests AreaPostInterest[]
+  areaPostSaves     AreaPostSave[]
+  areaPostComments  AreaPostComment[]
+  sentMessages      Message[] @relation("MessageSender")
+  receivedMessages  Message[] @relation("MessageReceiver")
+  stories           Story[]
+  storyViews        StoryView[]
+
+  @@index([area])
+}
+
+
+model Society {
+  id          String   @id @default(cuid())
+  name        String
+  addressLine String
+  city        String
+  state       String
+  pincode     String
+  createdAt   DateTime @default(now())
+
+  units       Unit[]
+  memberships Membership[]
+  notices     Notice[]
+  complaints  Complaint[]
+  posts       Post[]
+  polls       Poll[]
+  events      Event[]
+  listings    Listing[]
+
+  @@index([city, pincode])
+}
+
+model Unit {
+  id         String  @id @default(cuid())
+  societyId  String
+  unitNumber String
+  blockName  String?
+
+  society     Society      @relation(fields: [societyId], references: [id])
+  memberships Membership[]
+  complaints  Complaint[]
+
+  @@unique([societyId, unitNumber])
+}
+
+model Membership {
+  id        String            @id @default(cuid())
+  userId    String
+  societyId String
+  unitId    String?
+  role      MembershipRole
+  status    MembershipStatus  @default(PENDING)
+  createdAt DateTime          @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  society Society @relation(fields: [societyId], references: [id])
+  unit    Unit?   @relation(fields: [unitId], references: [id])
+
+  @@unique([userId, societyId])
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  societyId String
+  authorId  String
+  title     String
+  body      String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  society Society @relation(fields: [societyId], references: [id])
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([societyId])
+}
+
+model Complaint {
+  id          String          @id @default(cuid())
+  societyId   String
+  raisedById  String
+  unitId      String?
+  category    String
+  description String
+  status      ComplaintStatus @default(OPEN)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  society  Society @relation(fields: [societyId], references: [id])
+  raisedBy User    @relation(fields: [raisedById], references: [id])
+  unit     Unit?   @relation(fields: [unitId], references: [id])
+
+  @@index([societyId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  societyId String
+  authorId  String
+  type      PostType @default(GENERAL)
+  title     String?
+  body      String
+  createdAt DateTime @default(now())
+
+  society  Society   @relation(fields: [societyId], references: [id])
+  author   User      @relation(fields: [authorId], references: [id])
+  comments Comment[]
+
+  @@index([societyId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  post   Post @relation(fields: [postId], references: [id])
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([postId])
+}
+
+model Poll {
+  id        String   @id @default(cuid())
+  societyId String
+  authorId  String
+  question  String
+  createdAt DateTime @default(now())
+
+  society Society      @relation(fields: [societyId], references: [id])
+  author  User         @relation(fields: [authorId], references: [id])
+  options PollOption[]
+  votes   PollVote[]
+
+  @@index([societyId])
+}
+
+model PollOption {
+  id     String @id @default(cuid())
+  pollId String
+  label  String
+
+  poll  Poll       @relation(fields: [pollId], references: [id])
+  votes PollVote[]
+}
+
+model PollVote {
+  id           String   @id @default(cuid())
+  pollId       String
+  pollOptionId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id])
+  option PollOption @relation(fields: [pollOptionId], references: [id])
+  user   User       @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  societyId   String
+  authorId    String
+  title       String
+  description String
+  location    String
+  startAt     DateTime
+  createdAt   DateTime @default(now())
+
+  society Society     @relation(fields: [societyId], references: [id])
+  author  User        @relation(fields: [authorId], references: [id])
+  rsvps   EventRsvp[]
+
+  @@index([societyId])
+}
+
+model EventRsvp {
+  id        String     @id @default(cuid())
+  eventId   String
+  userId    String
+  status    RsvpStatus
+  createdAt DateTime   @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+}
+
+model Listing {
+  id          String          @id @default(cuid())
+  societyId   String
+  sellerId    String
+  category    ListingCategory
+  title       String
+  description String
+  price       Float?
+  imageUrls   String[]
+  status      ListingStatus   @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+
+  society Society @relation(fields: [societyId], references: [id])
+  seller  User    @relation(fields: [sellerId], references: [id])
+
+  @@index([societyId])
+}
+
+// --- Area feed (locality posts: updates, shops, sports invites, help
+// requests, social events, safety alerts, service requests) - authenticated,
+// owned by User.
+
+enum AreaPostKind {
+  UPDATE
+  SHOP
+  SPORTS_INVITE
+  HELP_REQUEST
+  SOCIAL_EVENT
+  SAFETY_ALERT
+  SERVICE_REQUEST
+  EMERGENCY_SOS
+}
+
+enum AreaPostVisibility {
+  PINCODE_ONLY
+  NEARBY
+}
+
+model AreaPost {
+  id          String             @id @default(cuid())
+  userId      String
+  area        String
+  pincode     String?
+  latitude    Float?
+  longitude   Float?
+  kind        AreaPostKind
+  visibility  AreaPostVisibility @default(NEARBY)
+  title       String
+  description String
+  imageUrls   String[]
+  videoUrl    String?
+  videoTrimStart Float?
+  videoTrimEnd   Float?
+  audioUrl    String?
+  location    String?
+  sportName   String?
+  serviceType String?
+  businessCategory String?
+  offerText   String?
+  businessHours String?
+  emergencyCategory String?
+  activityTime    String?
+  partnersNeeded  Int?
+  createdAt   DateTime           @default(now())
+
+  user      User               @relation(fields: [userId], references: [id])
+  interests AreaPostInterest[]
+  saves     AreaPostSave[]
+  comments  AreaPostComment[]
+
+  @@index([area])
+  @@index([latitude, longitude])
+}
+
+model AreaPostInterest {
+  id         String   @id @default(cuid())
+  areaPostId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([areaPostId, userId])
+}
+
+model AreaPostSave {
+  id         String   @id @default(cuid())
+  areaPostId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([areaPostId, userId])
+}
+
+model AreaPostComment {
+  id         String   @id @default(cuid())
+  areaPostId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
+  author   User     @relation(fields: [authorId], references: [id])
+
+  @@index([areaPostId])
+}
+
+// --- Private 1:1 messaging (no read receipts / conversation entity - a
+// thread is just "all messages between these two users").
+
+enum MessageKind {
+  TEXT
+  STICKER
+}
+
+model Message {
+  id         String      @id @default(cuid())
+  senderId   String
+  receiverId String
+  body       String
+  kind       MessageKind @default(TEXT)
+  createdAt  DateTime    @default(now())
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id])
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
+}
+
+// --- Stories: 24h-expiring photo/video updates, visible to same-area users.
+
+enum StoryMediaType {
+  IMAGE
+  VIDEO
+}
+
+model Story {
+  id        String         @id @default(cuid())
+  userId    String
+  mediaUrl  String
+  mediaType StoryMediaType
+  area      String
+  createdAt DateTime       @default(now())
+  expiresAt DateTime
+
+  user  User        @relation(fields: [userId], references: [id])
+  views StoryView[]
+
+  @@index([area])
+  @@index([expiresAt])
+}
+
+model StoryView {
+  id        String   @id @default(cuid())
+  storyId   String
+  viewerId  String
+  createdAt DateTime @default(now())
+
+  story  Story @relation(fields: [storyId], references: [id])
+  viewer User  @relation(fields: [viewerId], references: [id])
+
+  @@unique([storyId, viewerId])
+}

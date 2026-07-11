@@ -1,0 +1,187 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/api_client.dart';
+import '../../core/session/session_controller.dart';
+import '../../core/widgets/max_width_box.dart';
+import '../../models/area_post.dart';
+import '../../models/user.dart';
+import '../calls/call_service.dart';
+import '../users/user_repository.dart';
+import 'area_post_kind_ui.dart';
+import 'area_repository.dart';
+import 'create_area_post_screen.dart';
+
+class AreaProfileScreen extends ConsumerStatefulWidget {
+  const AreaProfileScreen({super.key});
+
+  @override
+  ConsumerState<AreaProfileScreen> createState() => _AreaProfileScreenState();
+}
+
+class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
+  bool _loading = true;
+  String? _error;
+  List<AppUser> _neighbours = [];
+  List<AreaPost> _myPosts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final user = ref.read(sessionControllerProvider).value?.user;
+    if (user?.area == null) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        ref.read(userRepositoryProvider).listNeighbours(user!.area!),
+        ref.read(areaRepositoryProvider).list(user.area!, mine: true),
+      ]);
+      setState(() {
+        _neighbours = results[0] as List<AppUser>;
+        _myPosts = results[1] as List<AreaPost>;
+      });
+    } catch (e) {
+      setState(() => _error = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(sessionControllerProvider).value?.user;
+    if (user == null) return const SizedBox.shrink();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_border),
+            tooltip: 'Saved posts',
+            onPressed: () => context.push('/home/saved'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_location_alt),
+            tooltip: 'Edit address / area',
+            onPressed: () async {
+              await context.push('/home/profile/edit-location');
+              _load();
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final posted = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => const CreateAreaPostScreen(initialKind: AreaPostKind.update),
+            ),
+          );
+          if (posted == true) _load();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New post'),
+      ),
+      body: MaxWidthBox(
+        child: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!))
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name ?? 'You',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.place, size: 16),
+                                  const SizedBox(width: 4),
+                                  Expanded(child: Text(user.area ?? '')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Neighbours (${_neighbours.length})',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      if (_neighbours.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('No one else has joined this area yet.'),
+                        )
+                      else
+                        ..._neighbours.map(
+                          (n) => Card(
+                            child: ListTile(
+                              leading: const CircleAvatar(child: Icon(Icons.person)),
+                              title: Text(n.name ?? 'Someone'),
+                              trailing: _NeighbourCallButton(neighbour: n),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                      Text('My posts (${_myPosts.length})',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      if (_myPosts.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('You haven\'t posted anything yet.'),
+                        )
+                      else
+                        ..._myPosts.map(
+                          (post) => Card(
+                            child: ListTile(
+                              leading: Icon(areaPostKindIcon(post.kind)),
+                              title: Text(post.title),
+                              subtitle: Text(areaPostKindLabel(post.kind)),
+                              onTap: () => context.push('/home/posts/${post.id}'),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NeighbourCallButton extends ConsumerWidget {
+  final AppUser neighbour;
+
+  const _NeighbourCallButton({required this.neighbour});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final callService = ref.watch(callServiceProvider);
+    final myName = ref.watch(sessionControllerProvider).value?.user?.name ?? 'Someone';
+    return IconButton.filled(
+      icon: const Icon(Icons.call),
+      tooltip: 'Call ${neighbour.name ?? 'neighbour'} (no number shared)',
+      onPressed: callService == null ? null : () => callService.call(neighbour.id, myName),
+    );
+  }
+}
