@@ -1,0 +1,16 @@
+name: Keep backend warm
+
+# Render's free tier spins the service down after 15 minutes of no traffic,
+# causing a 20+ second cold start on the next real visitor. This pings the
+# backend every 10 minutes so it never goes idle long enough to sleep.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: curl -sf --max-time 60 https://communityos-india.onrender.com/
