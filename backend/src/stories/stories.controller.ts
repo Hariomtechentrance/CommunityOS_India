@@ -33,6 +33,11 @@ export class StoriesController {
     return this.stories.markViewed(id, user.userId);
   }
 
+  @Get(':id/views')
+  getViewers(@Param('id') id: string, @CurrentUser() user: { userId: string }) {
+    return this.stories.getViewers(id, user.userId);
+  }
+
   @Delete(':id')
   delete(@Param('id') id: string, @CurrentUser() user: { userId: string }) {
     return this.stories.delete(id, user.userId);

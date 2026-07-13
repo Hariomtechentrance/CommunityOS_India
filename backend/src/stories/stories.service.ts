@@ -32,6 +32,7 @@ export class StoriesService {
       include: {
         user: { select: { id: true, name: true, avatarUrl: true } },
         views: { where: { viewerId: viewerUserId } },
+        _count: { select: { views: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -39,7 +40,9 @@ export class StoriesService {
     return stories.map((story) => ({
       ...story,
       seenByMe: story.views.length > 0,
+      viewCount: story.userId === viewerUserId ? story._count.views : undefined,
       views: undefined,
+      _count: undefined,
     }));
   }
 
@@ -50,6 +53,25 @@ export class StoriesService {
       update: {},
     });
     return { viewed: true };
+  }
+
+  /** Author-only: who has viewed this story, newest first. */
+  async getViewers(storyId: string, requesterId: string) {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.userId !== requesterId) throw new ForbiddenException('Not your story');
+
+    const views = await this.prisma.storyView.findMany({
+      where: { storyId },
+      include: { viewer: { select: { id: true, name: true, avatarUrl: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return views.map((v) => ({
+      viewerId: v.viewerId,
+      name: v.viewer.name,
+      avatarUrl: v.viewer.avatarUrl,
+      viewedAt: v.createdAt,
+    }));
   }
 
   async delete(storyId: string, userId: string) {

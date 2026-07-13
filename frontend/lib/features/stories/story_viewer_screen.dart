@@ -2,10 +2,12 @@ import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/session/session_controller.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/story.dart';
 import '../../models/user.dart';
 import 'story_repository.dart';
+import 'story_viewers_sheet.dart';
 
 const _imageStoryDuration = Duration(seconds: 5);
 
@@ -97,8 +99,19 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
     super.dispose();
   }
 
+  void _openViewers() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => StoryViewersSheet(storyId: _current.id),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final myUserId = ref.watch(sessionControllerProvider).value?.user?.id;
+    final isMyStory = myUserId != null && myUserId == widget.author.id;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -159,6 +172,24 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
                   const SizedBox(width: 8),
                   Text(widget.author.name ?? 'Someone', style: const TextStyle(color: Colors.white)),
                   const Spacer(),
+                  if (isMyStory)
+                    InkWell(
+                      onTap: _openViewers,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.remove_red_eye, color: Colors.white, size: 18),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_current.viewCount ?? 0}',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),

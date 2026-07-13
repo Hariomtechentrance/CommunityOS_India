@@ -32,6 +32,11 @@ class StoryRepository {
     await _client.dio.post('/stories/$storyId/view');
   }
 
+  Future<List<StoryViewer>> getViewers(String storyId) async {
+    final res = await _client.dio.get('/stories/$storyId/views');
+    return (res.data as List).map((e) => StoryViewer.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   Future<void> delete(String storyId) async {
     await _client.dio.delete('/stories/$storyId');
   }

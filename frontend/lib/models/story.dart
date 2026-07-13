@@ -17,6 +17,7 @@ class Story {
   final DateTime expiresAt;
   final AppUser? user;
   final bool seenByMe;
+  final int? viewCount;
 
   Story({
     required this.id,
@@ -27,6 +28,7 @@ class Story {
     required this.expiresAt,
     this.user,
     this.seenByMe = false,
+    this.viewCount,
   });
 
   factory Story.fromJson(Map<String, dynamic> json) => Story(
@@ -40,6 +42,31 @@ class Story {
             ? AppUser.fromJson(json['user'] as Map<String, dynamic>)
             : null,
         seenByMe: json['seenByMe'] as bool? ?? false,
+        viewCount: json['viewCount'] as int?,
+      );
+}
+
+class StoryViewer {
+  final String viewerId;
+  final String? name;
+  final String? avatarUrl;
+  final DateTime viewedAt;
+  final String? reaction;
+
+  StoryViewer({
+    required this.viewerId,
+    this.name,
+    this.avatarUrl,
+    required this.viewedAt,
+    this.reaction,
+  });
+
+  factory StoryViewer.fromJson(Map<String, dynamic> json) => StoryViewer(
+        viewerId: json['viewerId'] as String,
+        name: json['name'] as String?,
+        avatarUrl: json['avatarUrl'] as String?,
+        viewedAt: DateTime.parse(json['viewedAt'] as String),
+        reaction: json['reaction'] as String?,
       );
 }
 
