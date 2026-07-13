@@ -430,6 +430,7 @@ model Story {
   userId    String
   mediaUrl  String
   mediaType StoryMediaType
+  audioUrl  String?
   area      String
   createdAt DateTime       @default(now())
   expiresAt DateTime

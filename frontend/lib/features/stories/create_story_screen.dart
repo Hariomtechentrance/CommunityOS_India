@@ -1,15 +1,18 @@
+import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/media_upload_service.dart';
 import '../../models/story.dart';
 import 'story_repository.dart';
 
-/// Minimal "share to story" flow - pick a photo or video, preview, post.
-/// No filters/stickers on the story itself yet (see plan: deferred to a
-/// later round alongside Reels/photo filters).
+/// "Share to story" flow - pick a photo or video, optionally lay a recorded
+/// voice note under a photo (not offered for video, which already carries
+/// its own audio track), preview, post. No visual stickers/filters yet (see
+/// plan: deferred to a later round alongside Reels/photo filters).
 class CreateStoryScreen extends ConsumerStatefulWidget {
   const CreateStoryScreen({super.key});
 
@@ -23,6 +26,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   VideoPlayerController? _videoController;
   bool _loading = false;
   String? _error;
+
+  // Voice note (photo stories only).
+  final _recorder = AudioRecorder();
+  final _audioPlayer = ap.AudioPlayer();
+  bool _recording = false;
+  String? _audioPath;
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -48,7 +57,32 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _video = picked;
       _image = null;
       _videoController = controller;
+      _audioPath = null;
     });
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_recording) {
+      final path = await _recorder.stop();
+      setState(() {
+        _recording = false;
+        _audioPath = path;
+      });
+      return;
+    }
+    if (!await _recorder.hasPermission()) {
+      setState(() => _error = 'Microphone permission is needed to record a voice note.');
+      return;
+    }
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: 'voice-note.m4a');
+    setState(() {
+      _recording = true;
+      _audioPath = null;
+    });
+  }
+
+  void _removeAudio() {
+    setState(() => _audioPath = null);
   }
 
   Future<void> _share() async {
@@ -68,7 +102,16 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         mediaUrl = await upload.uploadVideo(_video!);
         mediaType = StoryMediaType.video;
       }
-      await ref.read(storyRepositoryProvider).create(mediaUrl: mediaUrl, mediaType: mediaType);
+      String? audioUrl;
+      if (_image != null && _audioPath != null) {
+        final bytes = await XFile(_audioPath!).readAsBytes();
+        audioUrl = await upload.uploadAudio(bytes, 'voice-note.m4a');
+      }
+      await ref.read(storyRepositoryProvider).create(
+            mediaUrl: mediaUrl,
+            mediaType: mediaType,
+            audioUrl: audioUrl,
+          );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
@@ -80,6 +123,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   @override
   void dispose() {
     _videoController?.dispose();
+    _recorder.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -108,6 +153,31 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       : const Icon(Icons.add_photo_alternate, color: Colors.white54, size: 80),
             ),
           ),
+          if (_image != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: _toggleRecording,
+                    icon: Icon(_recording ? Icons.stop_circle : Icons.mic),
+                    label: Text(_recording ? 'Stop recording' : 'Add voice note'),
+                  ),
+                  if (_audioPath != null) ...[
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow, color: Colors.white),
+                      onPressed: () => _audioPlayer.play(ap.UrlSource(_audioPath!)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.white),
+                      onPressed: _removeAudio,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(12),

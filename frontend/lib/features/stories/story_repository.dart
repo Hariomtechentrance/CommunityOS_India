@@ -12,10 +12,18 @@ class StoryRepository {
     return (res.data as List).map((e) => Story.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Story> create({required String mediaUrl, required StoryMediaType mediaType}) async {
+  Future<Story> create({
+    required String mediaUrl,
+    required StoryMediaType mediaType,
+    String? audioUrl,
+  }) async {
     final res = await _client.dio.post(
       '/stories',
-      data: {'mediaUrl': mediaUrl, 'mediaType': storyMediaTypeToJson(mediaType)},
+      data: {
+        'mediaUrl': mediaUrl,
+        'mediaType': storyMediaTypeToJson(mediaType),
+        if (audioUrl != null) 'audioUrl': audioUrl,
+      },
     );
     return Story.fromJson(res.data as Map<String, dynamic>);
   }

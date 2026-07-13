@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -31,6 +32,7 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
   late int _index;
   late AnimationController _controller;
   VideoPlayerController? _videoController;
+  ap.AudioPlayer? _audioPlayer;
 
   @override
   void initState() {
@@ -49,6 +51,8 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
     _controller.stop();
     _videoController?.dispose();
     _videoController = null;
+    await _audioPlayer?.dispose();
+    _audioPlayer = null;
 
     ref.read(storyRepositoryProvider).markViewed(_current.id);
 
@@ -61,6 +65,9 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
       _controller.duration = controller.value.duration;
     } else {
       _controller.duration = _imageStoryDuration;
+      if (_current.audioUrl != null) {
+        _audioPlayer = ap.AudioPlayer()..play(ap.UrlSource(_current.audioUrl!));
+      }
     }
     _controller
       ..reset()
@@ -86,6 +93,7 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
   void dispose() {
     _controller.dispose();
     _videoController?.dispose();
+    _audioPlayer?.dispose();
     super.dispose();
   }
 

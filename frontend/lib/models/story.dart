@@ -12,6 +12,7 @@ class Story {
   final String id;
   final String mediaUrl;
   final StoryMediaType mediaType;
+  final String? audioUrl;
   final DateTime createdAt;
   final DateTime expiresAt;
   final AppUser? user;
@@ -21,6 +22,7 @@ class Story {
     required this.id,
     required this.mediaUrl,
     required this.mediaType,
+    this.audioUrl,
     required this.createdAt,
     required this.expiresAt,
     this.user,
@@ -31,6 +33,7 @@ class Story {
         id: json['id'] as String,
         mediaUrl: json['mediaUrl'] as String,
         mediaType: storyMediaTypeFromJson(json['mediaType'] as String),
+        audioUrl: json['audioUrl'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         expiresAt: DateTime.parse(json['expiresAt'] as String),
         user: json['user'] != null

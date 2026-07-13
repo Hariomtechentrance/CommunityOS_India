@@ -15,7 +15,12 @@ export class StoriesController {
 
   @Post()
   create(@CurrentUser() user: { userId: string }, @Body() dto: CreateStoryDto) {
-    return this.stories.create(user.userId, dto.mediaUrl, dto.mediaType as StoryMediaType);
+    return this.stories.create(
+      user.userId,
+      dto.mediaUrl,
+      dto.mediaType as StoryMediaType,
+      dto.audioUrl,
+    );
   }
 
   @Get()

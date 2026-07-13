@@ -8,13 +8,14 @@ const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
 export class StoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: string, mediaUrl: string, mediaType: StoryMediaType) {
+  async create(userId: string, mediaUrl: string, mediaType: StoryMediaType, audioUrl?: string) {
     const author = await this.prisma.user.findUnique({ where: { id: userId } });
     return this.prisma.story.create({
       data: {
         userId,
         mediaUrl,
         mediaType,
+        audioUrl,
         area: author?.area ?? '',
         expiresAt: new Date(Date.now() + STORY_LIFETIME_MS),
       },
