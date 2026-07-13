@@ -7,19 +7,47 @@ import 'call_service.dart';
 /// an incoming-call prompt or an in-call banner regardless of which screen
 /// is currently active - calling only makes sense within "My Area", but the
 /// callee could be anywhere in that section when a call arrives.
-class CallOverlay extends ConsumerWidget {
+class CallOverlay extends ConsumerStatefulWidget {
   final Widget? child;
 
   const CallOverlay({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CallOverlay> createState() => _CallOverlayState();
+}
+
+class _CallOverlayState extends ConsumerState<CallOverlay> {
+  CallService? _bound;
+
+  void _bind(CallService? service) {
+    if (identical(_bound, service)) return;
+    _bound?.error.removeListener(_onError);
+    _bound = service;
+    _bound?.error.addListener(_onError);
+  }
+
+  void _onError() {
+    final message = _bound?.error.value;
+    if (message == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    _bound?.error.value = null;
+  }
+
+  @override
+  void dispose() {
+    _bound?.error.removeListener(_onError);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final callService = ref.watch(callServiceProvider);
-    if (callService == null) return child ?? const SizedBox.shrink();
+    _bind(callService);
+    if (callService == null) return widget.child ?? const SizedBox.shrink();
 
     return Stack(
       children: [
-        if (child != null) child!,
+        if (widget.child != null) widget.child!,
         ValueListenableBuilder<IncomingCall?>(
           valueListenable: callService.incoming,
           builder: (context, incoming, _) {

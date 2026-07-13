@@ -79,4 +79,8 @@ export class UsersService {
   updateFcmToken(userId: string, token: string) {
     return this.prisma.user.update({ where: { id: userId }, data: { fcmToken: token } });
   }
+
+  updateAvatar(userId: string, avatarUrl: string) {
+    return this.prisma.user.update({ where: { id: userId }, data: { avatarUrl } });
+  }
 }

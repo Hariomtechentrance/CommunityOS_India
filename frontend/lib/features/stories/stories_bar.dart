@@ -60,7 +60,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const SizedBox(height: 100);
+    if (_loading) return const SizedBox(height: 108);
 
     final myId = ref.watch(sessionControllerProvider).value?.user?.id;
     StoryGroup? myGroup;
@@ -73,7 +73,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
     final otherGroups = _groups.where((g) => g.author.id != myId).toList();
 
     return SizedBox(
-      height: 100,
+      height: 108,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

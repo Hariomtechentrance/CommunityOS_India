@@ -5,6 +5,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../core/api_client.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/turn_credentials.dart';
 
 enum CallStatus { idle, calling, ringing, connecting, connected }
 
@@ -20,6 +21,7 @@ class IncomingCall {
 /// at a time is supported.
 class CallService {
   final String myProfileId;
+  final ApiClient apiClient;
   late final io.Socket _socket;
   RTCPeerConnection? _pc;
   MediaStream? _localStream;
@@ -29,8 +31,9 @@ class CallService {
   final remoteRenderer = RTCVideoRenderer();
   final ValueNotifier<CallStatus> status = ValueNotifier(CallStatus.idle);
   final ValueNotifier<IncomingCall?> incoming = ValueNotifier(null);
+  final ValueNotifier<String?> error = ValueNotifier(null);
 
-  CallService({required this.myProfileId}) {
+  CallService({required this.myProfileId, required this.apiClient}) {
     remoteRenderer.initialize();
     _socket = io.io(
       apiBaseUrl,
@@ -53,6 +56,7 @@ class CallService {
     _socket.on('call:unavailable', (_) {
       status.value = CallStatus.idle;
       _peerProfileId = null;
+      error.value = "Couldn't reach them - they may not have the app open right now.";
     });
 
     _socket.on('call:accepted', (_) async {
@@ -100,11 +104,15 @@ class CallService {
 
   Future<void> _ensurePeerConnection() async {
     if (_pc != null) return;
-    _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+    } catch (_) {
+      error.value = "Couldn't access your microphone. Check your browser's mic permission.";
+      hangup();
+      rethrow;
+    }
     _pc = await createPeerConnection({
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ],
+      'iceServers': await fetchIceServers(apiClient),
     });
     for (final track in _localStream!.getTracks()) {
       await _pc!.addTrack(track, _localStream!);
@@ -121,6 +129,14 @@ class CallService {
         remoteRenderer.srcObject = event.streams[0];
       }
     };
+    // Without a TURN server, calls between peers that can't reach each other
+    // directly (different networks/NAT types) land here instead of "connected".
+    _pc!.onIceConnectionState = (state) {
+      if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        error.value = 'Call failed to connect - this can happen across some mobile networks.';
+        hangup();
+      }
+    };
   }
 
   Future<void> _sendOffer() async {
@@ -134,6 +150,7 @@ class CallService {
   void call(String toProfileId, String myName) {
     _peerProfileId = toProfileId;
     status.value = CallStatus.calling;
+    error.value = null;
     _socket.emit('call:invite', {
       'toProfileId': toProfileId,
       'fromProfileId': myProfileId,
@@ -185,7 +202,7 @@ class CallService {
 final callServiceProvider = Provider<CallService?>((ref) {
   final user = ref.watch(sessionControllerProvider).value?.user;
   if (user == null) return null;
-  final service = CallService(myProfileId: user.id);
+  final service = CallService(myProfileId: user.id, apiClient: ref.read(apiClientProvider));
   ref.onDispose(service.dispose);
   return service;
 });

@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum MembershipRole {
@@ -327,6 +328,9 @@ model AreaPost {
   longitude   Float?
   kind        AreaPostKind
   visibility  AreaPostVisibility @default(NEARBY)
+  // Author-chosen broadcast radius in km for NEARBY-visibility posts (null =
+  // legacy exact-area-string matching in listForArea, unaffected).
+  radiusKm    Float?
   title       String
   description String
   imageUrls   String[]

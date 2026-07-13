@@ -10,6 +10,8 @@ import '../area/area_post_kind_ui.dart';
 import '../area/area_repository.dart';
 import '../area/create_area_post_screen.dart';
 import '../emergency/emergency_sos_screen.dart';
+import '../live/go_live_screen.dart';
+import '../live/live_now_bar.dart';
 import '../stories/stories_bar.dart';
 
 /// Primary screen after login: a social-style feed of everything posted in
@@ -151,6 +153,17 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
             child: const Icon(Icons.emergency, color: Colors.white),
           ),
           const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'go-live-fab',
+            tooltip: 'Go live',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GoLiveScreen()),
+              );
+            },
+            child: const Icon(Icons.videocam),
+          ),
+          const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'new-post-fab',
             onPressed: () async {
@@ -170,6 +183,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         child: Column(
         children: [
           const StoriesBar(),
+          const LiveNowBar(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(

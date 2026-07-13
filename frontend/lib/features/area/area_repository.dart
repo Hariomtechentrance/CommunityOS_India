@@ -39,6 +39,7 @@ class AreaRepository {
     String? businessHours,
     String? activityTime,
     int? partnersNeeded,
+    double? radiusKm,
   }) async {
     final res = await _client.dio.post(
       '/area-posts',
@@ -51,6 +52,7 @@ class AreaRepository {
         if (location != null && location.isNotEmpty) 'location': location,
         if (sportName != null && sportName.isNotEmpty) 'sportName': sportName,
         'visibility': areaPostVisibilityToJson(visibility),
+        if (radiusKm != null) 'radiusKm': radiusKm,
         if (serviceType != null && serviceType.isNotEmpty) 'serviceType': serviceType,
         if (businessCategory != null && businessCategory.isNotEmpty)
           'businessCategory': businessCategory,

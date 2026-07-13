@@ -50,6 +50,7 @@ export class AreaService {
         businessHours: dto.businessHours,
         activityTime: dto.activityTime,
         partnersNeeded: dto.partnersNeeded,
+        radiusKm: dto.radiusKm,
       },
     });
     const point = await this.geocoding.geocode(dto.area);
@@ -71,21 +72,49 @@ export class AreaService {
     return post;
   }
 
-  /** Own posts are always visible to their author regardless of pincode. */
+  /**
+   * Own posts are always visible to their author regardless of pincode/radius.
+   * A `radiusKm` on the post caps its own reach - anyone outside that distance
+   * from where the post was made won't see it, even if they'd otherwise match
+   * on area/pincode.
+   */
   private isVisibleTo(
-    post: { userId: string; visibility: AreaPostVisibility; pincode: string | null },
+    post: {
+      userId: string;
+      visibility: AreaPostVisibility;
+      pincode: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      radiusKm: number | null;
+    },
     viewerUserId: string | undefined,
-    viewerPincode: string | null | undefined,
+    viewer: { pincode: string | null | undefined; latitude: number | null | undefined; longitude: number | null | undefined },
   ): boolean {
-    if (post.visibility !== AreaPostVisibility.PINCODE_ONLY) return true;
     if (viewerUserId && post.userId === viewerUserId) return true;
-    return !!post.pincode && !!viewerPincode && post.pincode === viewerPincode;
+
+    if (
+      post.radiusKm != null &&
+      post.latitude != null &&
+      post.longitude != null &&
+      viewer.latitude != null &&
+      viewer.longitude != null
+    ) {
+      const distance = haversineKm(post.latitude, post.longitude, viewer.latitude, viewer.longitude);
+      if (distance > post.radiusKm) return false;
+    }
+
+    if (post.visibility !== AreaPostVisibility.PINCODE_ONLY) return true;
+    return !!post.pincode && !!viewer.pincode && post.pincode === viewer.pincode;
   }
 
-  private async pincodeOf(userId?: string): Promise<string | null | undefined> {
-    if (!userId) return undefined;
+  private async viewerLocationOf(userId?: string): Promise<{
+    pincode: string | null | undefined;
+    latitude: number | null | undefined;
+    longitude: number | null | undefined;
+  }> {
+    if (!userId) return { pincode: undefined, latitude: undefined, longitude: undefined };
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    return user?.pincode;
+    return { pincode: user?.pincode, latitude: user?.latitude, longitude: user?.longitude };
   }
 
   /** Batched (not N+1) - one query for every post this viewer has saved. */
@@ -138,11 +167,11 @@ export class AreaService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const viewerPincode = await this.pincodeOf(viewerUserId);
+    const viewer = await this.viewerLocationOf(viewerUserId);
     const savedIds = await this.savedIdsOf(viewerUserId);
     const verifiedIds = await this.verifiedUserIds(posts.map((p) => p.userId));
     return posts
-      .filter((post) => this.isVisibleTo(post, viewerUserId, viewerPincode))
+      .filter((post) => this.isVisibleTo(post, viewerUserId, viewer))
       .map((post) => this.withVerifiedAuthor({ ...post, mySaved: savedIds.has(post.id) }, verifiedIds));
   }
 
@@ -166,12 +195,12 @@ export class AreaService {
       include: { user: true, _count: { select: { interests: true } } },
     });
 
-    const viewerPincode = await this.pincodeOf(viewerUserId);
+    const viewer = await this.viewerLocationOf(viewerUserId);
     const savedIds = await this.savedIdsOf(viewerUserId);
     const verifiedIds = await this.verifiedUserIds(candidates.map((p) => p.userId));
 
     return candidates
-      .filter((post) => this.isVisibleTo(post, viewerUserId, viewerPincode))
+      .filter((post) => this.isVisibleTo(post, viewerUserId, viewer))
       .map((post) =>
         this.withVerifiedAuthor(
           {
@@ -193,8 +222,8 @@ export class AreaService {
     });
     if (!post) throw new NotFoundException('Post not found');
 
-    const viewerPincode = await this.pincodeOf(viewerUserId);
-    if (!this.isVisibleTo(post, viewerUserId, viewerPincode)) {
+    const viewer = await this.viewerLocationOf(viewerUserId);
+    if (!this.isVisibleTo(post, viewerUserId, viewer)) {
       throw new NotFoundException('Post not found');
     }
 

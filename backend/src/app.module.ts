@@ -15,8 +15,10 @@ import { EventsModule } from './events/events.module';
 import { ListingsModule } from './listings/listings.module';
 import { AreaModule } from './area/area.module';
 import { CallsModule } from './calls/calls.module';
+import { LiveModule } from './live/live.module';
 import { MessagesModule } from './messages/messages.module';
 import { StoriesModule } from './stories/stories.module';
+import { TurnModule } from './turn/turn.module';
 
 @Module({
   imports: [
@@ -34,8 +36,10 @@ import { StoriesModule } from './stories/stories.module';
     ListingsModule,
     AreaModule,
     CallsModule,
+    LiveModule,
     MessagesModule,
     StoriesModule,
+    TurnModule,
   ],
   controllers: [AppController],
   providers: [AppService],

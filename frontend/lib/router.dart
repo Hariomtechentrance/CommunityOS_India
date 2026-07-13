@@ -51,6 +51,31 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
+/// Rendered instead of [JoinSocietyScreen] when `extra` comes back null (see
+/// the `/societies/join` route below). Actively bounces to `/home` on the
+/// next frame rather than just rendering blank and leaving the user stranded
+/// on a dead page.
+class _StaleJoinFallback extends StatefulWidget {
+  const _StaleJoinFallback();
+
+  @override
+  State<_StaleJoinFallback> createState() => _StaleJoinFallbackState();
+}
+
+class _StaleJoinFallbackState extends State<_StaleJoinFallback> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.go('/home');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshListenable = _SessionRefreshListenable(ref);
 
@@ -130,7 +155,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/societies/join',
-        builder: (context, state) => JoinSocietyScreen(society: state.extra as Society),
+        // `extra` is an in-memory value only - it doesn't survive a browser
+        // reload, and go_router can also rebuild this page directly (without
+        // re-running `redirect`) when an ancestor's refreshListenable fires
+        // while this route is still sitting in the Navigator's page stack -
+        // e.g. right after a join request gets approved. In that case
+        // `extra` comes back null; render nothing rather than crash instead
+        // of trying to redirect, since the stack is about to be replaced
+        // anyway once the root redirect finishes reconciling.
+        redirect: (context, state) => state.extra == null ? '/societies/search' : null,
+        builder: (context, state) {
+          final society = state.extra as Society?;
+          if (society == null) return const _StaleJoinFallback();
+          return JoinSocietyScreen(society: society);
+        },
       ),
       GoRoute(path: '/pending', builder: (context, state) => const PendingApprovalScreen()),
       GoRoute(

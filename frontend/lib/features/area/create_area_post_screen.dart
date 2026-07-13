@@ -33,6 +33,7 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
   final _partnersNeededController = TextEditingController(text: '1');
   late AreaPostKind _kind;
   AreaPostVisibility _visibility = AreaPostVisibility.nearby;
+  double _radiusKm = 5;
   final List<XFile> _images = [];
   bool _loading = false;
   String? _error;
@@ -154,6 +155,7 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
             partnersNeeded: _kind == AreaPostKind.sportsInvite
                 ? int.tryParse(_partnersNeededController.text.trim())
                 : null,
+            radiusKm: _visibility == AreaPostVisibility.nearby ? _radiusKm : null,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -324,6 +326,21 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
                   onSelectionChanged: (selection) =>
                       setState(() => _visibility = selection.first),
                 ),
+                if (_visibility == AreaPostVisibility.nearby) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Visible to anyone within ${_radiusKm.round()} km',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  Slider(
+                    value: _radiusKm,
+                    min: 1,
+                    max: 25,
+                    divisions: 24,
+                    label: '${_radiusKm.round()} km',
+                    onChanged: (value) => setState(() => _radiusKm = value),
+                  ),
+                ],
                 if (_visibility == AreaPostVisibility.pincodeOnly && !hasPincode) ...[
                   const SizedBox(height: 4),
                   Text(

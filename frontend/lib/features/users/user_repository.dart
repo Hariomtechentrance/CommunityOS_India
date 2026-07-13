@@ -51,6 +51,11 @@ class UserRepository {
   Future<void> updateFcmToken(String token) async {
     await _client.dio.patch('/users/me/fcm-token', data: {'token': token});
   }
+
+  Future<AppUser> updateAvatar(String avatarUrl) async {
+    final res = await _client.dio.patch('/users/me/avatar', data: {'avatarUrl': avatarUrl});
+    return AppUser.fromJson(res.data as Map<String, dynamic>);
+  }
 }
 
 final userRepositoryProvider = Provider<UserRepository>(

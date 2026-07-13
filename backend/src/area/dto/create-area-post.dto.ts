@@ -74,6 +74,17 @@ export class CreateAreaPostDto {
   @IsEnum(AREA_POST_VISIBILITIES)
   visibility?: (typeof AREA_POST_VISIBILITIES)[number];
 
+  @ApiPropertyOptional({
+    example: 5,
+    description:
+      'Broadcast radius in km for NEARBY-visibility posts - only viewers within this ' +
+      "distance of the post's location will see it. Ignored for PINCODE_ONLY.",
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.5)
+  radiusKm?: number;
+
   @ApiPropertyOptional({ example: 'Maid / Driver / Housekeeping' })
   @IsOptional()
   @IsString()

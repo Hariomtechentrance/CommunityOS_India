@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/api_client.dart';
+import '../../core/media_upload_service.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../models/area_post.dart';
@@ -24,6 +26,23 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
   String? _error;
   List<AppUser> _neighbours = [];
   List<AreaPost> _myPosts = [];
+  bool _uploadingAvatar = false;
+
+  Future<void> _pickAndUploadAvatar() async {
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (file == null) return;
+    setState(() => _uploadingAvatar = true);
+    try {
+      final url = await MediaUploadService().upload(file);
+      await ref.read(userRepositoryProvider).updateAvatar(url);
+      await ref.read(sessionControllerProvider.notifier).refreshUser();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
 
   @override
   void initState() {
@@ -103,20 +122,63 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                user.name ?? 'You',
-                                style: Theme.of(context).textTheme.titleLarge,
+                              InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+                                child: Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 32,
+                                      backgroundImage: user.avatarUrl != null
+                                          ? NetworkImage(user.avatarUrl!)
+                                          : null,
+                                      child: _uploadingAvatar
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : user.avatarUrl == null
+                                              ? const Icon(Icons.person, size: 32)
+                                              : null,
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: CircleAvatar(
+                                        radius: 11,
+                                        backgroundColor: Theme.of(context).colorScheme.primary,
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          size: 13,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.place, size: 16),
-                                  const SizedBox(width: 4),
-                                  Expanded(child: Text(user.area ?? '')),
-                                ],
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.name ?? 'You',
+                                      style: Theme.of(context).textTheme.titleLarge,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.place, size: 16),
+                                        const SizedBox(width: 4),
+                                        Expanded(child: Text(user.area ?? '')),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),

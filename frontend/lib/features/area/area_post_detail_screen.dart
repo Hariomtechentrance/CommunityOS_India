@@ -44,11 +44,13 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
         ref.read(areaRepositoryProvider).getById(widget.postId),
         ref.read(areaRepositoryProvider).listComments(widget.postId),
       ]);
+      if (!mounted) return;
       setState(() {
         _post = results[0] as AreaPost;
         _comments = results[1] as List<AreaPostComment>;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -68,6 +70,7 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
   Future<void> _toggleSave() async {
     try {
       final saved = await ref.read(areaRepositoryProvider).toggleSave(widget.postId);
+      if (!mounted) return;
       setState(() {
         _post = AreaPost(
           id: _post!.id,
@@ -114,6 +117,7 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
     setState(() => _postingComment = true);
     try {
       final comment = await ref.read(areaRepositoryProvider).addComment(widget.postId, body);
+      if (!mounted) return;
       setState(() => _comments = [..._comments, comment]);
       _commentController.clear();
     } catch (e) {
