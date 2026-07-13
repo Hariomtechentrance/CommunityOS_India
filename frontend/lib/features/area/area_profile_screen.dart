@@ -8,7 +8,9 @@ import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../models/area_post.dart';
 import '../../models/user.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../calls/call_service.dart';
+import '../profile/avatar_picker_screen.dart';
 import '../users/user_repository.dart';
 import 'area_post_kind_ui.dart';
 import 'area_repository.dart';
@@ -28,12 +30,9 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
   List<AreaPost> _myPosts = [];
   bool _uploadingAvatar = false;
 
-  Future<void> _pickAndUploadAvatar() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (file == null) return;
+  Future<void> _applyAvatar(String url) async {
     setState(() => _uploadingAvatar = true);
     try {
-      final url = await MediaUploadService().upload(file);
       await ref.read(userRepositoryProvider).updateAvatar(url);
       await ref.read(sessionControllerProvider.notifier).refreshUser();
     } catch (e) {
@@ -41,6 +40,43 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (file == null) return;
+    final url = await MediaUploadService().upload(file);
+    await _applyAvatar(url);
+  }
+
+  Future<void> _chooseAvatarSource() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo),
+              title: const Text('Choose photo'),
+              onTap: () => Navigator.of(context).pop('photo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome),
+              title: const Text('Generate avatar'),
+              onTap: () => Navigator.of(context).pop('generate'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'photo') {
+      await _pickAndUploadPhoto();
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AvatarPickerScreen()),
+      );
     }
   }
 
@@ -126,7 +162,7 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                             children: [
                               InkWell(
                                 customBorder: const CircleBorder(),
-                                onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+                                onTap: _uploadingAvatar ? null : _chooseAvatarSource,
                                 child: Stack(
                                   children: [
                                     CircleAvatar(
@@ -197,7 +233,7 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                         ..._neighbours.map(
                           (n) => Card(
                             child: ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.person)),
+                              leading: UserAvatar(avatarUrl: n.avatarUrl),
                               title: Text(n.name ?? 'Someone'),
                               trailing: _NeighbourCallButton(neighbour: n),
                             ),

@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../models/area_post.dart';
 import '../calls/call_service.dart';
 import 'area_post_kind_ui.dart';
@@ -320,7 +321,7 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                     ...(_post!.interestedUsers ?? []).map(
                                       (person) => Card(
                                         child: ListTile(
-                                          leading: const CircleAvatar(child: Icon(Icons.person)),
+                                          leading: UserAvatar(avatarUrl: person.avatarUrl),
                                           title: Text(person.name ?? 'Someone'),
                                           trailing: IconButton.filled(
                                             icon: const Icon(Icons.call),

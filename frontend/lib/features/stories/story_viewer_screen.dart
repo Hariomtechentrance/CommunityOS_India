@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../models/story.dart';
+import '../../models/user.dart';
 import 'story_repository.dart';
 
 const _imageStoryDuration = Duration(seconds: 5);
@@ -9,13 +11,13 @@ const _imageStoryDuration = Duration(seconds: 5);
 /// Full-screen tap-through viewer for one author's stories - progress-bar
 /// segments at top, auto-advances, tap right/left edge to go forward/back.
 class StoryViewerScreen extends ConsumerStatefulWidget {
-  final String authorName;
+  final AppUser author;
   final List<Story> stories;
   final int initialIndex;
 
   const StoryViewerScreen({
     super.key,
-    required this.authorName,
+    required this.author,
     required this.stories,
     this.initialIndex = 0,
   });
@@ -145,9 +147,9 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
               right: 8,
               child: Row(
                 children: [
-                  const CircleAvatar(radius: 14, child: Icon(Icons.person, size: 16)),
+                  UserAvatar(avatarUrl: widget.author.avatarUrl, radius: 14),
                   const SizedBox(width: 8),
-                  Text(widget.authorName, style: const TextStyle(color: Colors.white)),
+                  Text(widget.author.name ?? 'Someone', style: const TextStyle(color: Colors.white)),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),

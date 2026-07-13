@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/max_width_box.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../models/message.dart';
 import 'message_repository.dart';
 
@@ -64,7 +65,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                         itemBuilder: (context, index) {
                           final thread = _threads[index];
                           return ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.person)),
+                            leading: UserAvatar(avatarUrl: thread.otherUser.avatarUrl),
                             title: Text(thread.otherUser.name ?? 'Someone'),
                             subtitle: Text(
                               thread.lastMessage.body,

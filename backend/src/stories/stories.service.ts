@@ -29,7 +29,7 @@ export class StoriesService {
     const stories = await this.prisma.story.findMany({
       where: { area: { equals: viewer.area, mode: 'insensitive' }, expiresAt: { gt: new Date() } },
       include: {
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, avatarUrl: true } },
         views: { where: { viewerId: viewerUserId } },
       },
       orderBy: { createdAt: 'asc' },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../models/story.dart';
 import 'create_story_screen.dart';
 import 'story_repository.dart';
@@ -43,7 +44,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => StoryViewerScreen(
-          authorName: group.author.name ?? 'Someone',
+          author: group.author,
           stories: group.stories,
         ),
       ),
@@ -80,6 +81,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
         children: [
           _StoryCircle(
             label: 'Your story',
+            avatarUrl: myGroup?.author.avatarUrl,
             hasUnseen: false,
             showAddBadge: myGroup == null,
             onTap: myGroup != null ? () => _openViewer(myGroup!) : _openCreate,
@@ -87,6 +89,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
           ...otherGroups.map(
             (group) => _StoryCircle(
               label: group.author.name ?? 'Someone',
+              avatarUrl: group.author.avatarUrl,
               hasUnseen: group.hasUnseen,
               onTap: () => _openViewer(group),
             ),
@@ -99,6 +102,7 @@ class _StoriesBarState extends ConsumerState<StoriesBar> {
 
 class _StoryCircle extends StatelessWidget {
   final String label;
+  final String? avatarUrl;
   final bool hasUnseen;
   final bool showAddBadge;
   final VoidCallback onTap;
@@ -107,6 +111,7 @@ class _StoryCircle extends StatelessWidget {
     required this.label,
     required this.hasUnseen,
     required this.onTap,
+    this.avatarUrl,
     this.showAddBadge = false,
   });
 
@@ -129,7 +134,7 @@ class _StoryCircle extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  const CircleAvatar(radius: 28, child: Icon(Icons.person, size: 28)),
+                  UserAvatar(avatarUrl: avatarUrl, radius: 28),
                   if (showAddBadge)
                     Positioned(
                       bottom: 0,

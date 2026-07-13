@@ -34,14 +34,17 @@ export class MessagesService {
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       orderBy: { createdAt: 'desc' },
       include: {
-        sender: { select: { id: true, name: true } },
-        receiver: { select: { id: true, name: true } },
+        sender: { select: { id: true, name: true, avatarUrl: true } },
+        receiver: { select: { id: true, name: true, avatarUrl: true } },
       },
     });
 
     const seen = new Map<
       string,
-      { otherUser: { id: string; name: string | null }; lastMessage: (typeof messages)[number] }
+      {
+        otherUser: { id: string; name: string | null; avatarUrl: string | null };
+        lastMessage: (typeof messages)[number];
+      }
     >();
     for (const message of messages) {
       const otherUser = message.senderId === userId ? message.receiver : message.sender;

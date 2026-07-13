@@ -229,7 +229,7 @@ export class AreaService {
 
     let myInterest = false;
     let mySaved = false;
-    let interestedUsers: { id: string; name: string | null }[] | undefined;
+    let interestedUsers: { id: string; name: string | null; avatarUrl: string | null }[] | undefined;
 
     if (viewerUserId) {
       const [existingInterest, existingSave] = await Promise.all([
@@ -246,7 +246,7 @@ export class AreaService {
       if (post.userId === viewerUserId) {
         const interests = await this.prisma.areaPostInterest.findMany({
           where: { areaPostId: id },
-          include: { user: { select: { id: true, name: true } } },
+          include: { user: { select: { id: true, name: true, avatarUrl: true } } },
           orderBy: { createdAt: 'desc' },
         });
         interestedUsers = interests.map((i) => i.user);

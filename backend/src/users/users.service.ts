@@ -71,7 +71,7 @@ export class UsersService {
         area: { equals: area, mode: 'insensitive' },
         ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
       },
-      select: { id: true, name: true, phone: true, area: true, createdAt: true },
+      select: { id: true, name: true, phone: true, area: true, avatarUrl: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
   }
