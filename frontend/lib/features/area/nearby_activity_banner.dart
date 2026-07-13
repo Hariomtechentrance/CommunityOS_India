@@ -45,11 +45,16 @@ class _NearbyActivityBannerState extends ConsumerState<NearbyActivityBanner> {
   @override
   Widget build(BuildContext context) {
     final counts = _counts;
-    if (counts == null || counts.within5Km == 0) return const SizedBox.shrink();
+    // Only hidden before the first successful fetch - once loaded, always
+    // show something (including a zero-state) so the feature is actually
+    // discoverable instead of silently vanishing.
+    if (counts == null) return const SizedBox.shrink();
 
-    final label = counts.within1Km > 0
-        ? '${counts.within1Km} people active within 1 km'
-        : '${counts.within5Km} people active within 5 km';
+    final label = counts.within5Km == 0
+        ? 'No one else active nearby right now'
+        : counts.within1Km > 0
+            ? '${counts.within1Km} people active within 1 km'
+            : '${counts.within5Km} people active within 5 km';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
