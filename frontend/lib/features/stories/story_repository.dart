@@ -37,6 +37,10 @@ class StoryRepository {
     return (res.data as List).map((e) => StoryViewer.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  Future<void> react(String storyId, String emoji) async {
+    await _client.dio.post('/stories/$storyId/react', data: {'emoji': emoji});
+  }
+
   Future<void> delete(String storyId) async {
     await _client.dio.delete('/stories/$storyId');
   }

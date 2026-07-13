@@ -96,6 +96,7 @@ model User {
   receivedMessages  Message[] @relation("MessageReceiver")
   stories           Story[]
   storyViews        StoryView[]
+  storyReactions    StoryReaction[]
 
   @@index([area])
 }
@@ -435,8 +436,9 @@ model Story {
   createdAt DateTime       @default(now())
   expiresAt DateTime
 
-  user  User        @relation(fields: [userId], references: [id])
-  views StoryView[]
+  user      User            @relation(fields: [userId], references: [id])
+  views     StoryView[]
+  reactions StoryReaction[]
 
   @@index([area])
   @@index([expiresAt])
@@ -452,4 +454,17 @@ model StoryView {
   viewer User  @relation(fields: [viewerId], references: [id])
 
   @@unique([storyId, viewerId])
+}
+
+model StoryReaction {
+  id        String   @id @default(cuid())
+  storyId   String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([storyId, userId])
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +10,12 @@ import '../../core/api_client.dart';
 import '../../core/media_upload_service.dart';
 import '../../models/story.dart';
 import 'story_repository.dart';
+import 'story_sticker_editor.dart';
 
-/// "Share to story" flow - pick a photo or video, optionally lay a recorded
-/// voice note under a photo (not offered for video, which already carries
-/// its own audio track), preview, post. No visual stickers/filters yet (see
-/// plan: deferred to a later round alongside Reels/photo filters).
+/// "Share to story" flow - pick a photo or video, optionally add emoji/text
+/// stickers (photo only - baked into the pixels) and/or a recorded voice
+/// note (also photo only - video already has its own audio track), preview,
+/// post.
 class CreateStoryScreen extends ConsumerStatefulWidget {
   const CreateStoryScreen({super.key});
 
@@ -26,6 +29,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   VideoPlayerController? _videoController;
   bool _loading = false;
   String? _error;
+
+  // Stickers (photo stories only) - baked into the image's pixels once set.
+  Uint8List? _stickeredBytes;
 
   // Voice note (photo stories only).
   final _recorder = AudioRecorder();
@@ -41,6 +47,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _video = null;
       _videoController?.dispose();
       _videoController = null;
+      _stickeredBytes = null;
     });
   }
 
@@ -58,7 +65,16 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _image = null;
       _videoController = controller;
       _audioPath = null;
+      _stickeredBytes = null;
     });
+  }
+
+  Future<void> _openStickerEditor() async {
+    if (_image == null) return;
+    final bytes = await Navigator.of(context).push<Uint8List?>(
+      MaterialPageRoute(builder: (_) => StoryStickerEditor(image: _image!)),
+    );
+    if (bytes != null) setState(() => _stickeredBytes = bytes);
   }
 
   Future<void> _toggleRecording() async {
@@ -96,7 +112,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       String mediaUrl;
       StoryMediaType mediaType;
       if (_image != null) {
-        mediaUrl = await upload.upload(_image!);
+        mediaUrl = _stickeredBytes != null
+            ? await upload.uploadImageBytes(_stickeredBytes!, 'story-stickers.png')
+            : await upload.upload(_image!);
         mediaType = StoryMediaType.image;
       } else {
         mediaUrl = await upload.uploadVideo(_video!);
@@ -144,7 +162,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           Expanded(
             child: Center(
               child: _image != null
-                  ? Image.network(_image!.path, fit: BoxFit.contain)
+                  ? (_stickeredBytes != null
+                      ? Image.memory(_stickeredBytes!, fit: BoxFit.contain)
+                      : Image.network(_image!.path, fit: BoxFit.contain))
                   : _videoController != null && _videoController!.value.isInitialized
                       ? AspectRatio(
                           aspectRatio: _videoController!.value.aspectRatio,
@@ -153,11 +173,26 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       : const Icon(Icons.add_photo_alternate, color: Colors.white54, size: 80),
             ),
           ),
+          if (_video != null)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Stickers and voice notes aren\'t supported on video stories yet.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ),
           if (_image != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: _openStickerEditor,
+                    icon: const Icon(Icons.emoji_emotions_outlined),
+                    label: const Text('Stickers'),
+                  ),
+                  const SizedBox(width: 12),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
                     onPressed: _toggleRecording,

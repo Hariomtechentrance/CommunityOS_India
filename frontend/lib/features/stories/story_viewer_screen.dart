@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/curated_emoji.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/story.dart';
@@ -107,6 +108,16 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
     );
   }
 
+  String? _justReacted;
+
+  void _react(String emoji) {
+    ref.read(storyRepositoryProvider).react(_current.id, emoji);
+    setState(() => _justReacted = emoji);
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted && _justReacted == emoji) setState(() => _justReacted = null);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final myUserId = ref.watch(sessionControllerProvider).value?.user?.id;
@@ -197,6 +208,33 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
                 ],
               ),
             ),
+            if (!isMyStory)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 12,
+                child: SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: curatedEmoji.map((emoji) {
+                      final reacting = _justReacted == emoji;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GestureDetector(
+                          onTap: () => _react(emoji),
+                          child: AnimatedScale(
+                            scale: reacting ? 1.6 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

@@ -55,23 +55,39 @@ export class StoriesService {
     return { viewed: true };
   }
 
-  /** Author-only: who has viewed this story, newest first. */
+  /** Author-only: who has viewed this story (+ their reaction, if any), newest first. */
   async getViewers(storyId: string, requesterId: string) {
     const story = await this.prisma.story.findUnique({ where: { id: storyId } });
     if (!story) throw new NotFoundException('Story not found');
     if (story.userId !== requesterId) throw new ForbiddenException('Not your story');
 
-    const views = await this.prisma.storyView.findMany({
-      where: { storyId },
-      include: { viewer: { select: { id: true, name: true, avatarUrl: true } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [views, reactions] = await Promise.all([
+      this.prisma.storyView.findMany({
+        where: { storyId },
+        include: { viewer: { select: { id: true, name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.storyReaction.findMany({ where: { storyId } }),
+    ]);
+    const reactionByViewer = new Map(reactions.map((r) => [r.userId, r.emoji]));
+
     return views.map((v) => ({
       viewerId: v.viewerId,
       name: v.viewer.name,
       avatarUrl: v.viewer.avatarUrl,
       viewedAt: v.createdAt,
+      reaction: reactionByViewer.get(v.viewerId) ?? null,
     }));
+  }
+
+  /** One active reaction per viewer per story - picking a new emoji replaces the old one. */
+  async react(storyId: string, userId: string, emoji: string) {
+    await this.prisma.storyReaction.upsert({
+      where: { storyId_userId: { storyId, userId } },
+      create: { storyId, userId, emoji },
+      update: { emoji },
+    });
+    return { reacted: true };
   }
 
   async delete(storyId: string, userId: string) {

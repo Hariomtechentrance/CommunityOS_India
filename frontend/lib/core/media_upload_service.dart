@@ -26,6 +26,12 @@ class MediaUploadService {
     return _upload(await file.readAsBytes(), file.name, 'image');
   }
 
+  /// For images composited client-side (e.g. stickers baked onto a photo)
+  /// rather than picked directly from the device, so there's no [XFile].
+  Future<String> uploadImageBytes(List<int> bytes, String filename) async {
+    return _upload(bytes, filename, 'image');
+  }
+
   Future<List<String>> uploadAll(List<XFile> files) async {
     final urls = <String>[];
     for (final file in files) {

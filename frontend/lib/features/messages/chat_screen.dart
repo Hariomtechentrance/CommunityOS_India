@@ -2,20 +2,12 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
+import '../../core/curated_emoji.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../models/message.dart';
 import 'message_repository.dart';
 import 'message_service.dart';
-
-/// Curated large-emoji "stickers" - avoids sourcing/hosting licensed sticker
-/// artwork while still giving a "tap it, it lands big in the chat" feel.
-const _stickers = [
-  '👍', '❤️', '😂', '😮', '😢', '🙏',
-  '🎉', '🔥', '👏', '😍', '🤝', '✅',
-  '😊', '🥳', '😎', '🙌', '💯', '👋',
-  '☕', '⚽',
-];
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String otherUserId;
@@ -105,7 +97,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       builder: (context) => GridView.count(
         padding: const EdgeInsets.all(16),
         crossAxisCount: 6,
-        children: _stickers
+        children: curatedEmoji
             .map(
               (sticker) => InkWell(
                 onTap: () => Navigator.of(context).pop(sticker),
