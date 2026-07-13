@@ -6,6 +6,8 @@ import { CreateAreaPostDto } from './dto/create-area-post.dto';
 import { EmergencyAlertService } from './emergency-alert.service';
 
 const EARTH_RADIUS_KM = 6371;
+/** How close (in km) counts as "nearby" for cross-pincode emergency reach. */
+const EMERGENCY_NEARBY_KM = 0.1;
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -151,15 +153,51 @@ export class AreaService {
     };
   }
 
+  /**
+   * EMERGENCY_SOS posts must reach everyone who could plausibly help,
+   * regardless of whether their free-text `area` string happens to match the
+   * poster's - two neighbours in the same pincode (or just close by, near a
+   * pincode boundary) can easily reverse-geocode to different locality
+   * names. So on top of the normal exact-area match, also pull in any
+   * EMERGENCY_SOS post that matches the viewer's pincode or is within
+   * EMERGENCY_NEARBY_KM, independent of area string.
+   */
+  private emergencyReachClauses(viewer: {
+    pincode: string | null | undefined;
+    latitude: number | null | undefined;
+    longitude: number | null | undefined;
+  }) {
+    const clauses: Record<string, unknown>[] = [];
+    if (viewer.pincode) {
+      clauses.push({ kind: AreaPostKind.EMERGENCY_SOS, pincode: viewer.pincode });
+    }
+    if (viewer.latitude != null && viewer.longitude != null) {
+      const latDelta = EMERGENCY_NEARBY_KM / 111;
+      const lngDelta =
+        EMERGENCY_NEARBY_KM / (111 * Math.cos((viewer.latitude * Math.PI) / 180) || 1);
+      clauses.push({
+        kind: AreaPostKind.EMERGENCY_SOS,
+        latitude: { gte: viewer.latitude - latDelta, lte: viewer.latitude + latDelta },
+        longitude: { gte: viewer.longitude - lngDelta, lte: viewer.longitude + lngDelta },
+      });
+    }
+    return clauses;
+  }
+
   async listForArea(
     area: string,
     kind: AreaPostKind | undefined,
     viewerUserId: string | undefined,
     onlyMine: boolean,
   ) {
+    const viewer = await this.viewerLocationOf(viewerUserId);
+
     const posts = await this.prisma.areaPost.findMany({
       where: {
-        area: { equals: area, mode: 'insensitive' },
+        OR: [
+          { area: { equals: area, mode: 'insensitive' } },
+          ...this.emergencyReachClauses(viewer),
+        ],
         ...(kind ? { kind } : {}),
         ...(onlyMine && viewerUserId ? { userId: viewerUserId } : {}),
       },
@@ -167,7 +205,6 @@ export class AreaService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const viewer = await this.viewerLocationOf(viewerUserId);
     const savedIds = await this.savedIdsOf(viewerUserId);
     const verifiedIds = await this.verifiedUserIds(posts.map((p) => p.userId));
     return posts
