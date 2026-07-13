@@ -35,6 +35,11 @@ export class AreaPostsController {
     return this.area.listSaved(user.userId);
   }
 
+  @Get('nearby-active-counts')
+  nearbyActiveCounts(@CurrentUser() user: { userId: string }) {
+    return this.area.nearbyActiveCounts(user.userId);
+  }
+
   @Get('nearby')
   nearby(
     @Query('lat') lat: string,

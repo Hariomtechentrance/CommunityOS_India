@@ -36,6 +36,16 @@ export class AlertsGateway implements OnGatewayDisconnect {
     this.socketToUser.set(client.id, data.userId);
   }
 
+  /**
+   * Every logged-in user connects here the moment the app opens (it's the
+   * SOS alert channel, mounted app-wide) - so this doubles as a ready-made
+   * "who currently has the app open" presence signal, with no separate
+   * heartbeat/last-seen tracking needed.
+   */
+  getConnectedUserIds(): string[] {
+    return [...this.userToSocket.keys()];
+  }
+
   pushToUsers(userIds: string[], payload: unknown) {
     for (const userId of userIds) {
       const socketId = this.userToSocket.get(userId);

@@ -311,12 +311,18 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                 const SizedBox(height: 16),
                                 if (_isOwner) ...[
                                   Text(
-                                    'Interested (${_post!.interestCount})',
+                                    _post!.kind == AreaPostKind.emergencySos
+                                        ? 'People who can help (${_post!.interestCount})'
+                                        : 'Interested (${_post!.interestCount})',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   if ((_post!.interestedUsers ?? []).isEmpty)
-                                    const Text('No one yet - check back soon.')
+                                    Text(
+                                      _post!.kind == AreaPostKind.emergencySos
+                                          ? 'No one has offered to help yet.'
+                                          : 'No one yet - check back soon.',
+                                    )
                                   else
                                     ...(_post!.interestedUsers ?? []).map(
                                       (person) => Card(
@@ -412,9 +418,15 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
   }
 
   String get _interestLabel {
-    final label = _post!.kind == AreaPostKind.sportsInvite ? "I'm Available" : "I'm interested";
+    final label = switch (_post!.kind) {
+      AreaPostKind.sportsInvite => "I'm Available",
+      AreaPostKind.emergencySos => "I'm nearby, I can help",
+      _ => "I'm interested",
+    };
+    final selectedLabel =
+        _post!.kind == AreaPostKind.emergencySos ? 'Offered to help' : 'Interested';
     return _post!.myInterest
-        ? 'Interested (${_post!.interestCount})'
+        ? '$selectedLabel (${_post!.interestCount})'
         : '$label (${_post!.interestCount})';
   }
 }

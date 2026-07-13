@@ -121,6 +121,25 @@ class AreaRepository {
     final res = await _client.dio.post('/area-posts/$areaPostId/interest');
     return res.data['interested'] as bool;
   }
+
+  /// Aggregate-only counts of people with the app currently open nearby -
+  /// never individual positions/identities, by design.
+  Future<NearbyActiveCounts> nearbyActiveCounts() async {
+    final res = await _client.dio.get('/area-posts/nearby-active-counts');
+    return NearbyActiveCounts.fromJson(res.data as Map<String, dynamic>);
+  }
+}
+
+class NearbyActiveCounts {
+  final int within1Km;
+  final int within5Km;
+
+  NearbyActiveCounts({required this.within1Km, required this.within5Km});
+
+  factory NearbyActiveCounts.fromJson(Map<String, dynamic> json) => NearbyActiveCounts(
+        within1Km: json['within1Km'] as int,
+        within5Km: json['within5Km'] as int,
+      );
 }
 
 final areaRepositoryProvider = Provider<AreaRepository>(

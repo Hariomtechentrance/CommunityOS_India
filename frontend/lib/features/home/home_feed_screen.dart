@@ -9,6 +9,7 @@ import '../../models/area_post.dart';
 import '../area/area_post_kind_ui.dart';
 import '../area/area_repository.dart';
 import '../area/create_area_post_screen.dart';
+import '../area/nearby_activity_banner.dart';
 import '../emergency/emergency_sos_screen.dart';
 import '../live/go_live_screen.dart';
 import '../live/live_now_bar.dart';
@@ -184,6 +185,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         children: [
           const StoriesBar(),
           const LiveNowBar(),
+          const NearbyActivityBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(

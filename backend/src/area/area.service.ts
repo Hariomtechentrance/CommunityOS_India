@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AreaPostKind, AreaPostVisibility, MembershipStatus } from '@prisma/client';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertsGateway } from './alerts.gateway';
 import { CreateAreaPostDto } from './dto/create-area-post.dto';
 import { EmergencyAlertService } from './emergency-alert.service';
 
@@ -25,6 +26,7 @@ export class AreaService {
     private readonly prisma: PrismaService,
     private readonly geocoding: GeocodingService,
     private readonly emergencyAlert: EmergencyAlertService,
+    private readonly alerts: AlertsGateway,
   ) {}
 
   async createAreaPost(userId: string, dto: CreateAreaPostDto) {
@@ -250,6 +252,40 @@ export class AreaService {
       )
       .filter((post) => post.distanceKm <= radiusKm)
       .sort((a, b) => a.distanceKm - b.distanceKm);
+  }
+
+  /**
+   * Aggregate-only "how many people are around" counts, banded by distance -
+   * deliberately never reveals who or exactly where. Built from
+   * AlertsGateway's live connection registry, so it reflects who actually
+   * has the app open right now, not just anyone who ever set a location.
+   *
+   * Precise per-person distance/tracking was explicitly ruled out (privacy/
+   * stalking risk, DPDP Act exposure) in favour of this aggregate view - see
+   * project notes.
+   */
+  async nearbyActiveCounts(viewerUserId: string) {
+    const viewer = await this.prisma.user.findUnique({ where: { id: viewerUserId } });
+    if (viewer?.latitude == null || viewer?.longitude == null) {
+      return { within1Km: 0, within5Km: 0 };
+    }
+
+    const connectedIds = this.alerts.getConnectedUserIds().filter((id) => id !== viewerUserId);
+    if (connectedIds.length === 0) return { within1Km: 0, within5Km: 0 };
+
+    const active = await this.prisma.user.findMany({
+      where: { id: { in: connectedIds }, latitude: { not: null }, longitude: { not: null } },
+      select: { latitude: true, longitude: true },
+    });
+
+    let within1Km = 0;
+    let within5Km = 0;
+    for (const u of active) {
+      const distance = haversineKm(viewer.latitude, viewer.longitude, u.latitude!, u.longitude!);
+      if (distance <= 5) within5Km++;
+      if (distance <= 1) within1Km++;
+    }
+    return { within1Km, within5Km };
   }
 
   async findOne(id: string, viewerUserId?: string) {
