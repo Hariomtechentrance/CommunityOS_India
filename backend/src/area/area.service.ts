@@ -156,22 +156,26 @@ export class AreaService {
   }
 
   /**
-   * EMERGENCY_SOS posts must reach everyone who could plausibly help,
-   * regardless of whether their free-text `area` string happens to match the
-   * poster's - two neighbours in the same pincode (or just close by, near a
-   * pincode boundary) can easily reverse-geocode to different locality
-   * names. So on top of the normal exact-area match, also pull in any
-   * EMERGENCY_SOS post that matches the viewer's pincode or is within
-   * EMERGENCY_NEARBY_KM, independent of area string.
+   * Posts must reach everyone who could plausibly care, regardless of
+   * whether their free-text `area` string happens to match the poster's -
+   * two neighbours in the same pincode can easily reverse-geocode to
+   * different locality names (different street, landmark, etc.). So on top
+   * of the normal exact-area match, also pull in anything matching the
+   * viewer's pincode, independent of area string - this applies to every
+   * post kind (shop listings, social events, ...), not just emergencies.
+   *
+   * EMERGENCY_SOS gets one extra leg on top: also reachable within
+   * EMERGENCY_NEARBY_KM even across a pincode boundary, since urgent safety
+   * posts shouldn't stop at an administrative line.
    */
-  private emergencyReachClauses(viewer: {
+  private reachClauses(viewer: {
     pincode: string | null | undefined;
     latitude: number | null | undefined;
     longitude: number | null | undefined;
   }) {
     const clauses: Record<string, unknown>[] = [];
     if (viewer.pincode) {
-      clauses.push({ kind: AreaPostKind.EMERGENCY_SOS, pincode: viewer.pincode });
+      clauses.push({ pincode: viewer.pincode });
     }
     if (viewer.latitude != null && viewer.longitude != null) {
       const latDelta = EMERGENCY_NEARBY_KM / 111;
@@ -198,7 +202,7 @@ export class AreaService {
       where: {
         OR: [
           { area: { equals: area, mode: 'insensitive' } },
-          ...this.emergencyReachClauses(viewer),
+          ...this.reachClauses(viewer),
         ],
         ...(kind ? { kind } : {}),
         ...(onlyMine && viewerUserId ? { userId: viewerUserId } : {}),

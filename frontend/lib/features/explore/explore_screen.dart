@@ -88,7 +88,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final shops = _filteredShops;
 
     return Scaffold(
-      appBar: AppBar(title: Text('New to ${user?.area ?? 'your area'}')),
+      appBar: AppBar(
+        title: Text('New to ${user?.area ?? 'your area'}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            tooltip: 'View on map',
+            onPressed: () => context.push('/home/explore-map'),
+          ),
+        ],
+      ),
       body: MaxWidthBox(
         maxWidth: 900,
         child: RefreshIndicator(

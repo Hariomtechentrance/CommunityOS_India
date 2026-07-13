@@ -17,6 +17,7 @@ import { AreaModule } from './area/area.module';
 import { CallsModule } from './calls/calls.module';
 import { LiveModule } from './live/live.module';
 import { MessagesModule } from './messages/messages.module';
+import { PlacesModule } from './places/places.module';
 import { StoriesModule } from './stories/stories.module';
 import { TurnModule } from './turn/turn.module';
 
@@ -38,6 +39,7 @@ import { TurnModule } from './turn/turn.module';
     CallsModule,
     LiveModule,
     MessagesModule,
+    PlacesModule,
     StoriesModule,
     TurnModule,
   ],

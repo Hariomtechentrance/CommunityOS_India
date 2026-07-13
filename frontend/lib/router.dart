@@ -15,6 +15,7 @@ import 'features/community/event_detail_screen.dart';
 import 'features/community/post_detail_screen.dart';
 import 'features/complaints/complaints_list_screen.dart';
 import 'features/emergency/emergency_sos_screen.dart';
+import 'features/explore/explore_map_screen.dart';
 import 'features/home/home_map_screen.dart';
 import 'features/home/home_shell_screen.dart';
 import 'features/home/society_home_screen.dart';
@@ -176,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeShellScreen(),
         routes: [
           GoRoute(path: 'map', builder: (context, state) => const HomeMapScreen()),
+          GoRoute(path: 'explore-map', builder: (context, state) => const ExploreMapScreen()),
           GoRoute(path: 'saved', builder: (context, state) => const SavedPostsScreen()),
           GoRoute(
             path: 'emergency/new',
