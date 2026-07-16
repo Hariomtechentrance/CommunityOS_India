@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { FollowsModule } from './follows/follows.module';
 import { SocietiesModule } from './societies/societies.module';
 import { MembershipsModule } from './memberships/memberships.module';
 import { NoticesModule } from './notices/notices.module';
@@ -29,6 +30,7 @@ import { TurnModule } from './turn/turn.module';
     AdminModule,
     AuthModule,
     UsersModule,
+    FollowsModule,
     SocietiesModule,
     MembershipsModule,
     NoticesModule,

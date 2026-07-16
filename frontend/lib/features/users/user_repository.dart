@@ -12,6 +12,16 @@ class UserRepository {
     return AppUser.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<AppUser> getById(String userId) async {
+    final res = await _client.dio.get('/users/$userId/profile');
+    return AppUser.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<List<AppUser>> search(String query) async {
+    final res = await _client.dio.get('/users/search', queryParameters: {'q': query});
+    return (res.data as List).map((e) => AppUser.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   Future<AppUser> updateLocation({
     String? name,
     String? addressLine,

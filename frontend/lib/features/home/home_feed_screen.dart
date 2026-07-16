@@ -80,6 +80,11 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         title: Text(user?.area ?? 'NIKAT'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_search_outlined),
+            tooltip: 'Find people',
+            onPressed: () => context.push('/home/search-people'),
+          ),
+          IconButton(
             icon: const Icon(Icons.map_outlined),
             tooltip: 'View on map',
             onPressed: () => context.push('/home/map'),
@@ -469,7 +474,17 @@ class _PostCard extends ConsumerWidget {
               Row(
                 children: [
                   _PostActionButton(
-                    icon: post.myInterest ? Icons.favorite : Icons.favorite_border,
+                    icon: Icons.favorite_border,
+                    iconWidget: post.myInterest
+                        ? ClipOval(
+                            child: Image.asset(
+                              'assets/images/nikat_logo.jpg',
+                              height: 18,
+                              width: 18,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : null,
                     label: 'Interested (${post.interestCount})',
                     onTap: () => _toggleInterest(ref, context),
                   ),
@@ -511,10 +526,16 @@ class _PostCard extends ConsumerWidget {
 
 class _PostActionButton extends StatelessWidget {
   final IconData icon;
+  final Widget? iconWidget;
   final String label;
   final VoidCallback onTap;
 
-  const _PostActionButton({required this.icon, required this.label, required this.onTap});
+  const _PostActionButton({
+    required this.icon,
+    this.iconWidget,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -527,7 +548,7 @@ class _PostActionButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18),
+              iconWidget ?? Icon(icon, size: 18),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(

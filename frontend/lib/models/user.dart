@@ -2,6 +2,7 @@ class AppUser {
   final String id;
   final String phone;
   final String? name;
+  final String? username;
   final String? avatarUrl;
   final String? addressLine;
   final String? city;
@@ -20,6 +21,7 @@ class AppUser {
     required this.id,
     required this.phone,
     this.name,
+    this.username,
     this.avatarUrl,
     this.addressLine,
     this.city,
@@ -42,6 +44,7 @@ class AppUser {
         id: json['id'] as String,
         phone: json['phone'] as String? ?? '',
         name: json['name'] as String?,
+        username: json['username'] as String?,
         avatarUrl: json['avatarUrl'] as String?,
         addressLine: json['addressLine'] as String?,
         city: json['city'] as String?,
@@ -64,6 +67,7 @@ class AppUser {
         'id': id,
         'phone': phone,
         'name': name,
+        'username': username,
         'avatarUrl': avatarUrl,
         'addressLine': addressLine,
         'city': city,

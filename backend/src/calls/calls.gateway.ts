@@ -1,3 +1,4 @@
+import { Inject, Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -6,22 +7,35 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import type { App } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import { Server, Socket } from 'socket.io';
+import { FIREBASE_ADMIN } from '../auth/firebase-admin.provider';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Pure signaling relay for in-app calling - no media ever passes through the
  * server, only WebRTC offer/answer/ICE payloads, keyed by the caller's/
  * callee's authenticated `userId` (the client reads this from its own
  * session). If the target user isn't currently connected, the caller gets
- * `call:unavailable`.
+ * `call:unavailable` AND, if the target has a push token, a missed-call
+ * notification is sent so they can call back once they open the app -
+ * previously this case reached nobody at all.
  */
 @WebSocketGateway({ cors: { origin: true } })
 export class CallsGateway implements OnGatewayDisconnect {
+  private readonly logger = new Logger(CallsGateway.name);
+
   @WebSocketServer()
   server: Server;
 
   private readonly profileToSocket = new Map<string, string>();
   private readonly socketToProfile = new Map<string, string>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(FIREBASE_ADMIN) private readonly firebaseApp: App | null,
+  ) {}
 
   handleDisconnect(client: Socket) {
     const profileId = this.socketToProfile.get(client.id);
@@ -48,6 +62,7 @@ export class CallsGateway implements OnGatewayDisconnect {
     const targetSocketId = this.profileToSocket.get(data.toProfileId);
     if (!targetSocketId) {
       client.emit('call:unavailable', { toProfileId: data.toProfileId });
+      this.notifyMissedCall(data.toProfileId, data.fromProfileId, data.fromName).catch(() => {});
       return;
     }
     this.server.to(targetSocketId).emit('call:incoming', {
@@ -105,5 +120,27 @@ export class CallsGateway implements OnGatewayDisconnect {
     if (!targetSocketId) return;
     const fromProfileId = this.socketToProfile.get(client.id);
     this.server.to(targetSocketId).emit(event, { fromProfileId, ...extra });
+  }
+
+  private async notifyMissedCall(toProfileId: string, fromProfileId: string, fromName: string) {
+    if (!this.firebaseApp) return;
+    const target = await this.prisma.user.findUnique({
+      where: { id: toProfileId },
+      select: { fcmToken: true },
+    });
+    if (!target?.fcmToken) return;
+
+    try {
+      await getMessaging(this.firebaseApp).send({
+        token: target.fcmToken,
+        notification: {
+          title: `Missed call from ${fromName || 'Someone'}`,
+          body: 'Open NIKAT to call them back.',
+        },
+        data: { type: 'missed_call', fromProfileId, fromName },
+      });
+    } catch (error) {
+      this.logger.warn(`Missed-call push to ${toProfileId} failed (stale token?): ${error}`);
+    }
   }
 }

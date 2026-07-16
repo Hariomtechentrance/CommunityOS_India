@@ -22,6 +22,21 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(title, {
     body,
     icon: 'icons/Icon-192.png',
-    tag: payload.data?.postId,
+    tag: payload.data?.postId ?? payload.data?.type,
   });
+});
+
+// Tapping any notification (emergency alert, missed call, etc.) should at
+// least bring the app to the front - a closed tab has nowhere more specific
+// to deep-link into until it finishes booting anyway.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ('focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('/');
+    }),
+  );
 });

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AreaPostKind, AreaPostVisibility, MembershipStatus } from '@prisma/client';
+import { FollowsService } from '../follows/follows.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertsGateway } from './alerts.gateway';
@@ -30,6 +31,7 @@ export class AreaService {
     private readonly geocoding: GeocodingService,
     private readonly emergencyAlert: EmergencyAlertService,
     private readonly alerts: AlertsGateway,
+    private readonly follows: FollowsService,
   ) {}
 
   async createAreaPost(userId: string, dto: CreateAreaPostDto) {
@@ -364,7 +366,26 @@ export class AreaService {
       return { interested: false };
     }
     await this.prisma.areaPostInterest.create({ data: { areaPostId, userId } });
+
+    // Fire-and-forget: this user's followers see they're active/interested
+    // in something, mirroring the "your friend liked this" pattern - never
+    // block the toggle itself on notification delivery.
+    this.notifyFollowersOfInterest(areaPostId, userId).catch(() => {});
     return { interested: true };
+  }
+
+  private async notifyFollowersOfInterest(areaPostId: string, userId: string) {
+    const [user, post] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+      this.prisma.areaPost.findUnique({ where: { id: areaPostId }, select: { title: true } }),
+    ]);
+    if (!user || !post) return;
+
+    await this.follows.notifyFollowers(userId, {
+      title: `${user.name ?? 'Someone you follow'} is interested`,
+      body: post.title,
+      data: { areaPostId },
+    });
   }
 
   async toggleSave(areaPostId: string, userId: string) {

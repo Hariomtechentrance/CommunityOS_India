@@ -64,6 +64,11 @@ model User {
   avatarUrl String?
   createdAt DateTime @default(now())
 
+  // Shareable/searchable handle, auto-generated once at registration (see
+  // UsersService.generateUsername) - lets people find each other the way a
+  // phone number-only lookup never could (nobody shares raw phone numbers).
+  username String? @unique
+
   // Location profile - filled in once, right after login, via
   // PATCH /users/me/location. Nullable so login still works before it's set.
   addressLine String?
@@ -102,6 +107,8 @@ model User {
   areaPostInterests AreaPostInterest[]
   areaPostSaves     AreaPostSave[]
   areaPostComments  AreaPostComment[]
+  following         Follow[] @relation("Follower")
+  followers         Follow[] @relation("Following")
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageReceiver")
   stories           Story[]
@@ -111,6 +118,20 @@ model User {
   @@index([area])
 }
 
+// --- Follow graph: directed, no approval needed (unlike society Membership).
+// followerId follows followingId.
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
 
 model Society {
   id          String   @id @default(cuid())

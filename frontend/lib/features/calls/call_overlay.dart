@@ -102,8 +102,9 @@ class _IncomingCallCard extends StatelessWidget {
                       label: const Text('Accept'),
                     ),
                     const SizedBox(width: 12),
-                    OutlinedButton.icon(
+                    FilledButton.icon(
                       onPressed: callService.reject,
+                      style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
                       icon: const Icon(Icons.call_end),
                       label: const Text('Reject'),
                     ),
@@ -161,8 +162,10 @@ class _InCallBar extends StatelessWidget {
                   height: 0,
                   child: RTCVideoView(callService.remoteRenderer),
                 ),
-                IconButton(
+                IconButton.filled(
                   onPressed: callService.hangup,
+                  tooltip: 'Hang up',
+                  style: IconButton.styleFrom(backgroundColor: Colors.red.shade700),
                   icon: const Icon(Icons.call_end, color: Colors.white),
                 ),
               ],

@@ -276,23 +276,29 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                     const Icon(Icons.person, size: 18),
                                     const SizedBox(width: 6),
                                     Expanded(
-                                      child: Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              _post!.user?.name ?? 'Someone',
-                                              overflow: TextOverflow.ellipsis,
+                                      child: InkWell(
+                                        onTap: _post!.user == null
+                                            ? null
+                                            : () => context
+                                                .push('/home/users/${_post!.user!.id}'),
+                                        child: Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                _post!.user?.name ?? 'Someone',
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
-                                          ),
-                                          if (_post!.user?.verified == true) ...[
-                                            const SizedBox(width: 4),
-                                            Icon(
-                                              Icons.verified,
-                                              size: 16,
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
+                                            if (_post!.user?.verified == true) ...[
+                                              const SizedBox(width: 4),
+                                              Icon(
+                                                Icons.verified,
+                                                size: 16,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ],
                                           ],
-                                        ],
+                                        ),
                                       ),
                                     ),
                                     if (_canCall) ...[
@@ -329,6 +335,8 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                         child: ListTile(
                                           leading: UserAvatar(avatarUrl: person.avatarUrl),
                                           title: Text(person.name ?? 'Someone'),
+                                          onTap: () =>
+                                              context.push('/home/users/${person.id}'),
                                           trailing: IconButton.filled(
                                             icon: const Icon(Icons.call),
                                             tooltip:
@@ -352,11 +360,16 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                     children: [
                                       OutlinedButton.icon(
                                         onPressed: _toggleInterest,
-                                        icon: Icon(
-                                          _post!.myInterest
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                        ),
+                                        icon: _post!.myInterest
+                                            ? ClipOval(
+                                                child: Image.asset(
+                                                  'assets/images/nikat_logo.jpg',
+                                                  height: 18,
+                                                  width: 18,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : const Icon(Icons.favorite_border),
                                         label: Text(_interestLabel),
                                       ),
                                     ],

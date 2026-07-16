@@ -35,6 +35,9 @@ import 'features/notices/notices_list_screen.dart';
 import 'features/onboarding/location_setup_screen.dart';
 import 'features/societies/create_society_screen.dart';
 import 'features/societies/society_search_screen.dart';
+import 'features/users/follow_list_screen.dart';
+import 'features/users/public_profile_screen.dart';
+import 'features/users/user_search_screen.dart';
 import 'models/society.dart';
 
 /// Bridges Riverpod's [sessionControllerProvider] to go_router's
@@ -218,6 +221,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'map', builder: (context, state) => const HomeMapScreen()),
           GoRoute(path: 'explore-map', builder: (context, state) => const ExploreMapScreen()),
           GoRoute(path: 'saved', builder: (context, state) => const SavedPostsScreen()),
+          GoRoute(path: 'search-people', builder: (context, state) => const UserSearchScreen()),
           GoRoute(
             path: 'emergency/new',
             builder: (context, state) => const EmergencySosScreen(),
@@ -236,6 +240,27 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'posts/:postId',
             builder: (context, state) =>
                 AreaPostDetailScreen(postId: state.pathParameters['postId']!),
+          ),
+          GoRoute(
+            path: 'users/:userId',
+            builder: (context, state) =>
+                PublicProfileScreen(userId: state.pathParameters['userId']!),
+            routes: [
+              GoRoute(
+                path: 'followers',
+                builder: (context, state) => FollowListScreen(
+                  userId: state.pathParameters['userId']!,
+                  mode: FollowListMode.followers,
+                ),
+              ),
+              GoRoute(
+                path: 'following',
+                builder: (context, state) => FollowListScreen(
+                  userId: state.pathParameters['userId']!,
+                  mode: FollowListMode.following,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: 'messages',

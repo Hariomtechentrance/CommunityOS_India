@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/api_client.dart';
 import '../../core/media_upload_service.dart';
 import '../../core/session/session_controller.dart';
@@ -213,6 +214,31 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                                         Expanded(child: Text(user.area ?? '')),
                                       ],
                                     ),
+                                    if (user.username != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '@${user.username}',
+                                              style: const TextStyle(color: Colors.black54),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.share_outlined, size: 20),
+                                            tooltip: 'Share my profile',
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: () => SharePlus.instance.share(
+                                              ShareParams(
+                                                text:
+                                                    'Find me on NIKAT: @${user.username}',
+                                                subject: 'My NIKAT profile',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -235,6 +261,7 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                             child: ListTile(
                               leading: UserAvatar(avatarUrl: n.avatarUrl),
                               title: Text(n.name ?? 'Someone'),
+                              onTap: () => context.push('/home/users/${n.id}'),
                               trailing: _NeighbourCallButton(neighbour: n),
                             ),
                           ),
