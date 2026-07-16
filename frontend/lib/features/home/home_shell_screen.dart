@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../area/area_profile_screen.dart';
 import '../explore/explore_screen.dart';
 import '../messages/chat_list_screen.dart';
+import '../reels/reels_feed_screen.dart';
 import 'home_feed_screen.dart';
 
 /// Persistent bottom-tab shell for the 4 first-class destinations (matching
@@ -25,6 +26,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   static const _tabs = [
     HomeFeedScreen(),
     ExploreScreen(),
+    ReelsFeedScreen(),
     ChatListScreen(),
     AreaProfileScreen(),
   ];
@@ -39,6 +41,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Explore'),
+          NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Reels'),
           NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Chats'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],

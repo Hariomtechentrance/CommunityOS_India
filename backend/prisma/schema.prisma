@@ -114,6 +114,10 @@ model User {
   stories           Story[]
   storyViews        StoryView[]
   storyReactions    StoryReaction[]
+  reels             Reel[]
+  reelLikes         ReelLike[]
+  reelComments      ReelComment[]
+  campaigns         Campaign[]
 
   @@index([area])
 }
@@ -499,4 +503,124 @@ model StoryReaction {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, userId])
+}
+
+// --- Reels: permanent short vertical videos (unlike 24h-expiring Stories),
+// browsed as their own dedicated full-screen swipe feed.
+
+model Reel {
+  id        String   @id @default(cuid())
+  userId    String
+  videoUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    ReelLike[]
+  comments ReelComment[]
+
+  @@index([createdAt])
+}
+
+model ReelLike {
+  id        String   @id @default(cuid())
+  reelId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  reel Reel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reelId, userId])
+}
+
+model ReelComment {
+  id        String   @id @default(cuid())
+  reelId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  reel   Reel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([reelId])
+}
+
+// --- Ad campaigns: self-serve promoted posts, paid via Razorpay, shown as
+// "Sponsored" cards in the area feed to whichever audience the campaign
+// targets. Payment is server-verified (webhook signature), never trusted
+// from the client alone.
+
+enum CampaignObjective {
+  SALES
+  DOWNLOADS
+  AWARENESS
+  ENGAGEMENT
+}
+
+enum CampaignTargetType {
+  NEARBY // targetLatitude/Longitude/RadiusKm
+  PINCODE // targetPincode
+  STATES // targetStates (one or more)
+  ALL_INDIA
+}
+
+enum CampaignStatus {
+  DRAFT // created, payment not started
+  PENDING_PAYMENT // checkout link issued, awaiting Razorpay confirmation
+  ACTIVE // paid, currently shown to its target audience
+  COMPLETED // ran its course (endDate passed) or budget exhausted
+  REJECTED
+}
+
+model Campaign {
+  id              String              @id @default(cuid())
+  userId          String
+  objective       CampaignObjective
+  title           String
+  description     String
+  imageUrl        String?
+  ctaUrl          String?
+  targetType      CampaignTargetType
+  targetPincode   String?
+  targetStates    String[]
+  targetLatitude  Float?
+  targetLongitude Float?
+  targetRadiusKm  Float?
+  budgetInPaise   Int
+  status          CampaignStatus      @default(DRAFT)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime            @default(now())
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments    CampaignPayment[]
+  impressions CampaignImpression[]
+
+  @@index([status])
+  @@index([targetPincode])
+}
+
+model CampaignPayment {
+  id                String   @id @default(cuid())
+  campaignId        String
+  razorpayLinkId    String   @unique
+  razorpayPaymentId String?
+  amountInPaise     Int
+  status            String   @default("created")
+  createdAt         DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model CampaignImpression {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
 }

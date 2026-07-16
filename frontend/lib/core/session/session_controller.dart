@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/auth_repository.dart';
 import '../../features/membership/membership_repository.dart';
@@ -52,18 +53,39 @@ class SessionController extends AsyncNotifier<SessionState> {
     ref.read(apiClientProvider).token = token;
 
     // Prefer a fresh /users/me (picks up location profile changes made
-    // elsewhere); fall back to the cached copy if that fails (e.g. offline).
+    // elsewhere); fall back to the cached copy for anything short of a
+    // definite "this token is invalid" (401/403). A Render cold start, a
+    // network blip, or a dropped connection must never look the same as a
+    // real logout - previously any failure here wiped the stored token
+    // outright, forcing a brand new OTP login even though nothing was
+    // actually wrong with the session.
     AppUser? user;
+    var tokenDefinitelyInvalid = false;
     try {
       user = await ref.read(userRepositoryProvider).getMe();
       await _storage.writeUser(user.toJson());
-    } catch (_) {
-      final userJson = await _storage.readUser();
-      user = userJson != null ? AppUser.fromJson(userJson) : null;
+    } catch (e) {
+      tokenDefinitelyInvalid = _isAuthError(e);
+      try {
+        final userJson = await _storage.readUser();
+        user = userJson != null ? AppUser.fromJson(userJson) : null;
+      } catch (_) {
+        // Cached copy doesn't parse (e.g. shape changed since it was
+        // written) - fall through with user still null rather than letting
+        // this escape and crash the whole session build.
+      }
+    }
+
+    if (tokenDefinitelyInvalid) {
+      await _storage.clear();
+      return const SessionState();
     }
 
     if (user == null) {
-      await _storage.clear();
+      // No cached copy to fall back on, and /users/me failed for a non-auth
+      // reason - stay logged out for *this* load, but deliberately leave
+      // the token in storage untouched so the next launch/reload can retry
+      // once the transient issue clears, instead of demanding a fresh login.
       return const SessionState();
     }
 
@@ -143,6 +165,17 @@ class SessionController extends AsyncNotifier<SessionState> {
     ref.read(apiClientProvider).token = null;
     await _storage.clear();
     state = const AsyncData(SessionState());
+  }
+
+  /// Only an explicit 401/403 means the token itself is invalid - anything
+  /// else (timeout, connection error, 5xx from a cold-starting backend) is
+  /// "couldn't check right now", not "logged out".
+  bool _isAuthError(Object error) {
+    if (error is DioException) {
+      final status = error.response?.statusCode;
+      return status == 401 || status == 403;
+    }
+    return false;
   }
 }
 

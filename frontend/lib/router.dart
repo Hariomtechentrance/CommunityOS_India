@@ -7,6 +7,7 @@ import 'features/admin/admin_dashboard_screen.dart';
 import 'features/admin/admin_login_screen.dart';
 import 'features/admin/admin_user_detail_screen.dart';
 import 'features/admin/admin_users_list_screen.dart';
+import 'features/ads/my_campaigns_screen.dart';
 import 'features/area/area_post_detail_screen.dart';
 import 'features/area/area_profile_screen.dart';
 import 'features/area/saved_posts_screen.dart';
@@ -222,6 +223,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'explore-map', builder: (context, state) => const ExploreMapScreen()),
           GoRoute(path: 'saved', builder: (context, state) => const SavedPostsScreen()),
           GoRoute(path: 'search-people', builder: (context, state) => const UserSearchScreen()),
+          GoRoute(path: 'ads/mine', builder: (context, state) => const MyCampaignsScreen()),
           GoRoute(
             path: 'emergency/new',
             builder: (context, state) => const EmergencySosScreen(),

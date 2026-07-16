@@ -125,6 +125,11 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
             onPressed: () => context.push('/home/saved'),
           ),
           IconButton(
+            icon: const Icon(Icons.campaign_outlined),
+            tooltip: 'Ad campaigns',
+            onPressed: () => context.push('/home/ads/mine'),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_location_alt),
             tooltip: 'Edit address / area',
             onPressed: () async {

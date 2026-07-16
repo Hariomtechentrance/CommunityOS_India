@@ -5,7 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true - the Razorpay webhook needs the exact raw request bytes
+  // to verify its HMAC signature; a re-serialized JSON body would produce a
+  // different signature and always fail verification.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Dev-only: allow the local Flutter web dev server (different origin/port) to call this API.
   app.enableCors({ origin: true });

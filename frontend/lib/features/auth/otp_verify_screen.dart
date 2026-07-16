@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import 'phone_verification.dart';
@@ -131,6 +132,27 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Verify'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              // The phone-entry screen is still on the stack
+                              // with the number already filled in - popping
+                              // back to it and re-tapping Send OTP is the
+                              // resend flow.
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/login');
+                              }
+                            },
+                      child: const Text("Didn't receive the code? Resend"),
+                    ),
+                    TextButton(
+                      onPressed: _loading ? null : () => context.go('/'),
+                      child: const Text('Cancel and go back to main page'),
                     ),
                   ],
                 ),

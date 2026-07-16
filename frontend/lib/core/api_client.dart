@@ -12,7 +12,17 @@ class ApiClient {
   final Dio dio;
   String? token;
 
-  ApiClient() : dio = Dio(BaseOptions(baseUrl: apiBaseUrl)) {
+  ApiClient()
+      : dio = Dio(
+          BaseOptions(
+            baseUrl: apiBaseUrl,
+            // Render's free tier can take up to ~50s to wake a cold backend -
+            // long enough to cover that without leaving a stuck request
+            // hanging forever if the server is genuinely unreachable.
+            connectTimeout: const Duration(seconds: 60),
+            receiveTimeout: const Duration(seconds: 60),
+          ),
+        ) {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {

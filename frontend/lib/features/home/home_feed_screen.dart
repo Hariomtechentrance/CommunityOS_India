@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,9 @@ import '../../core/relative_time.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../models/area_post.dart';
+import '../../models/campaign.dart';
+import '../ads/campaigns_repository.dart';
+import '../ads/sponsored_post_card.dart';
 import '../area/area_post_kind_ui.dart';
 import '../area/area_repository.dart';
 import '../area/create_area_post_screen.dart';
@@ -14,6 +19,10 @@ import '../emergency/emergency_sos_screen.dart';
 import '../live/go_live_screen.dart';
 import '../live/live_now_bar.dart';
 import '../stories/stories_bar.dart';
+
+/// One sponsored campaign is interleaved after every this-many posts, so
+/// ads stay noticeable without dominating an organic feed.
+const _sponsoredEveryN = 5;
 
 /// Primary screen after login: a social-style feed of everything posted in
 /// this app for your area - shops, help requests, sports invites, updates,
@@ -32,6 +41,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   bool _loading = true;
   String? _error;
   List<AreaPost> _posts = [];
+  List<Campaign> _campaigns = [];
   String _query = '';
 
   @override
@@ -53,6 +63,13 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
     try {
       final posts = await ref.read(areaRepositoryProvider).list(user!.area!, kind: _filter);
       setState(() => _posts = posts);
+      // Sponsored posts are a nice-to-have overlay on the real feed - never
+      // let an ads outage block the feed itself from loading.
+      unawaited(
+        ref.read(campaignsRepositoryProvider).feed().then((campaigns) {
+          if (mounted) setState(() => _campaigns = campaigns);
+        }).catchError((_) {}),
+      );
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -68,6 +85,23 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
           post.description.toLowerCase().contains(q) ||
           (post.user?.name?.toLowerCase().contains(q) ?? false);
     }).toList();
+  }
+
+  /// Interleaves one sponsored campaign after every [_sponsoredEveryN]
+  /// organic posts, cycling through the active campaigns. Skipped entirely
+  /// while the user is searching, so ads never show up as false matches.
+  List<Object> _mergeWithSponsored(List<AreaPost> posts) {
+    if (_campaigns.isEmpty || _query.trim().isNotEmpty) return posts;
+    final merged = <Object>[];
+    var adIndex = 0;
+    for (var i = 0; i < posts.length; i++) {
+      merged.add(posts[i]);
+      if ((i + 1) % _sponsoredEveryN == 0) {
+        merged.add(_campaigns[adIndex % _campaigns.length]);
+        adIndex++;
+      }
+    }
+    return merged;
   }
 
   @override
@@ -257,14 +291,26 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                                 ),
                               ],
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              itemCount: posts.length,
-                              itemBuilder: (context, index) => _PostCard(
-                                post: posts[index],
-                                onTap: () => context.push('/home/posts/${posts[index].id}'),
-                                onChanged: _load,
-                              ),
+                          : Builder(
+                              builder: (context) {
+                                final feedItems = _mergeWithSponsored(posts);
+                                return ListView.builder(
+                                  padding: const EdgeInsets.only(bottom: 80),
+                                  itemCount: feedItems.length,
+                                  itemBuilder: (context, index) {
+                                    final item = feedItems[index];
+                                    if (item is Campaign) {
+                                      return SponsoredPostCard(campaign: item);
+                                    }
+                                    final post = item as AreaPost;
+                                    return _PostCard(
+                                      post: post,
+                                      onTap: () => context.push('/home/posts/${post.id}'),
+                                      onChanged: _load,
+                                    );
+                                  },
+                                );
+                              },
                             ),
             ),
           ),

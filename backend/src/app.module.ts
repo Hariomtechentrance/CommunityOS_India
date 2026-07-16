@@ -22,6 +22,8 @@ import { MessagesModule } from './messages/messages.module';
 import { PlacesModule } from './places/places.module';
 import { StoriesModule } from './stories/stories.module';
 import { TurnModule } from './turn/turn.module';
+import { ReelsModule } from './reels/reels.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { TurnModule } from './turn/turn.module';
     PlacesModule,
     StoriesModule,
     TurnModule,
+    ReelsModule,
+    CampaignsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
