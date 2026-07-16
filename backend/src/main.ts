@@ -16,8 +16,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('CommunityOS India API')
-    .setDescription('Backend & admin core for the CommunityOS India MVP')
+    .setTitle('NIKAT API')
+    .setDescription('Backend & admin core for the NIKAT MVP')
     .setVersion('0.1')
     .addBearerAuth()
     .build();

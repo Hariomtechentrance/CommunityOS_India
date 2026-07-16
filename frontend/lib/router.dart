@@ -1,15 +1,19 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/session/session_controller.dart';
+import 'features/admin/admin_dashboard_screen.dart';
+import 'features/admin/admin_login_screen.dart';
+import 'features/admin/admin_user_detail_screen.dart';
+import 'features/admin/admin_users_list_screen.dart';
 import 'features/area/area_post_detail_screen.dart';
 import 'features/area/area_profile_screen.dart';
 import 'features/area/saved_posts_screen.dart';
 import 'features/auth/demo_user_switcher_screen.dart';
 import 'features/auth/otp_request_screen.dart';
 import 'features/auth/otp_verify_screen.dart';
+import 'features/auth/phone_verification.dart';
 import 'features/community/community_home_screen.dart';
 import 'features/community/event_detail_screen.dart';
 import 'features/community/post_detail_screen.dart';
@@ -92,12 +96,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       final session = asyncSession.value;
+      final onAdmin = location.startsWith('/admin');
+      final onAdminLogin = location == '/admin/login';
       final onPublicEntry = location == '/' || location.startsWith('/login');
 
       // Everything requires a login now - OTP verifies identity, then a
-      // one-time location profile unlocks the rest of the app.
+      // one-time location profile unlocks the rest of the app. /admin/login
+      // is the one other unauthenticated entry point; other /admin/* paths
+      // bounce there instead of rendering with no session.
       if (session == null || !session.isAuthenticated) {
-        return onPublicEntry ? null : '/';
+        if (onPublicEntry || onAdminLogin) return null;
+        return onAdmin ? '/admin/login' : '/';
+      }
+
+      // Super admins are a separate identity from consumer/society accounts
+      // - no location profile, no society membership, just the admin panel.
+      if (session.isSuperAdmin) {
+        return onAdmin && !onAdminLogin ? null : '/admin';
+      }
+      if (onAdmin) {
+        return '/home';
       }
 
       final onOnboarding = location == '/onboarding/location';
@@ -136,7 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login/verify',
         builder: (context, state) =>
-            OtpVerifyScreen(confirmationResult: state.extra as ConfirmationResult),
+            OtpVerifyScreen(pending: state.extra as PhoneVerificationPending),
       ),
       GoRoute(
         path: '/login/switch-demo',
@@ -172,6 +190,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/pending', builder: (context, state) => const PendingApprovalScreen()),
+      GoRoute(
+        path: '/admin/login',
+        builder: (context, state) => const AdminLoginScreen(),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminDashboardScreen(),
+        routes: [
+          GoRoute(
+            path: 'users',
+            builder: (context, state) => const AdminUsersListScreen(),
+            routes: [
+              GoRoute(
+                path: ':userId',
+                builder: (context, state) =>
+                    AdminUserDetailScreen(userId: state.pathParameters['userId']!),
+              ),
+            ],
+          ),
+        ],
+      ),
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeShellScreen(),

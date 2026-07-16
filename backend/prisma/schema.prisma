@@ -78,6 +78,16 @@ model User {
   // Single most-recent token per user - fine at this stage, multi-device is later.
   fcmToken String?
 
+  // Platform-wide admin (see backend/src/admin) - independent of any
+  // per-society Membership role. Manually granted, not self-service.
+  // Super admins log in with email+password (POST /admin/login) instead of
+  // the consumer phone-OTP flow - passwordHash is only ever set for them.
+  isSuperAdmin Boolean   @default(false)
+  isSuspended  Boolean   @default(false)
+  lastLoginAt  DateTime?
+  email        String?   @unique
+  passwordHash String?
+
   memberships       Membership[]
   authoredNotices   Notice[]
   raisedComplaints  Complaint[]
@@ -129,7 +139,7 @@ model Unit {
   unitNumber String
   blockName  String?
 
-  society     Society      @relation(fields: [societyId], references: [id])
+  society     Society      @relation(fields: [societyId], references: [id], onDelete: Cascade)
   memberships Membership[]
   complaints  Complaint[]
 
@@ -145,9 +155,9 @@ model Membership {
   status    MembershipStatus  @default(PENDING)
   createdAt DateTime          @default(now())
 
-  user    User    @relation(fields: [userId], references: [id])
-  society Society @relation(fields: [societyId], references: [id])
-  unit    Unit?   @relation(fields: [unitId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  society Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  unit    Unit?   @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@unique([userId, societyId])
 }
@@ -161,8 +171,8 @@ model Notice {
   pinned    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  society Society @relation(fields: [societyId], references: [id])
-  author  User    @relation(fields: [authorId], references: [id])
+  society Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([societyId])
 }
@@ -178,9 +188,9 @@ model Complaint {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  society  Society @relation(fields: [societyId], references: [id])
-  raisedBy User    @relation(fields: [raisedById], references: [id])
-  unit     Unit?   @relation(fields: [unitId], references: [id])
+  society  Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  raisedBy User    @relation(fields: [raisedById], references: [id], onDelete: Cascade)
+  unit     Unit?   @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@index([societyId])
 }
@@ -194,8 +204,8 @@ model Post {
   body      String
   createdAt DateTime @default(now())
 
-  society  Society   @relation(fields: [societyId], references: [id])
-  author   User      @relation(fields: [authorId], references: [id])
+  society  Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments Comment[]
 
   @@index([societyId])
@@ -208,8 +218,8 @@ model Comment {
   body      String
   createdAt DateTime @default(now())
 
-  post   Post @relation(fields: [postId], references: [id])
-  author User @relation(fields: [authorId], references: [id])
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }
@@ -221,8 +231,8 @@ model Poll {
   question  String
   createdAt DateTime @default(now())
 
-  society Society      @relation(fields: [societyId], references: [id])
-  author  User         @relation(fields: [authorId], references: [id])
+  society Society      @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  author  User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   options PollOption[]
   votes   PollVote[]
 
@@ -234,7 +244,7 @@ model PollOption {
   pollId String
   label  String
 
-  poll  Poll       @relation(fields: [pollId], references: [id])
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
   votes PollVote[]
 }
 
@@ -245,9 +255,9 @@ model PollVote {
   userId       String
   createdAt    DateTime @default(now())
 
-  poll   Poll       @relation(fields: [pollId], references: [id])
-  option PollOption @relation(fields: [pollOptionId], references: [id])
-  user   User       @relation(fields: [userId], references: [id])
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([pollId, userId])
 }
@@ -262,8 +272,8 @@ model Event {
   startAt     DateTime
   createdAt   DateTime @default(now())
 
-  society Society     @relation(fields: [societyId], references: [id])
-  author  User        @relation(fields: [authorId], references: [id])
+  society Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  author  User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   rsvps   EventRsvp[]
 
   @@index([societyId])
@@ -276,8 +286,8 @@ model EventRsvp {
   status    RsvpStatus
   createdAt DateTime   @default(now())
 
-  event Event @relation(fields: [eventId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
 }
@@ -294,8 +304,8 @@ model Listing {
   status      ListingStatus   @default(ACTIVE)
   createdAt   DateTime        @default(now())
 
-  society Society @relation(fields: [societyId], references: [id])
-  seller  User    @relation(fields: [sellerId], references: [id])
+  society Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  seller  User    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@index([societyId])
 }
@@ -318,6 +328,7 @@ enum AreaPostKind {
 enum AreaPostVisibility {
   PINCODE_ONLY
   NEARBY
+  ALL_INDIA
 }
 
 model AreaPost {
@@ -350,7 +361,7 @@ model AreaPost {
   partnersNeeded  Int?
   createdAt   DateTime           @default(now())
 
-  user      User               @relation(fields: [userId], references: [id])
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   interests AreaPostInterest[]
   saves     AreaPostSave[]
   comments  AreaPostComment[]
@@ -365,8 +376,8 @@ model AreaPostInterest {
   userId     String
   createdAt  DateTime @default(now())
 
-  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([areaPostId, userId])
 }
@@ -377,8 +388,8 @@ model AreaPostSave {
   userId     String
   createdAt  DateTime @default(now())
 
-  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([areaPostId, userId])
 }
@@ -390,8 +401,8 @@ model AreaPostComment {
   body       String
   createdAt  DateTime @default(now())
 
-  areaPost AreaPost @relation(fields: [areaPostId], references: [id])
-  author   User     @relation(fields: [authorId], references: [id])
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([areaPostId])
 }
@@ -412,8 +423,8 @@ model Message {
   kind       MessageKind @default(TEXT)
   createdAt  DateTime    @default(now())
 
-  sender   User @relation("MessageSender", fields: [senderId], references: [id])
-  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id])
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId])
   @@index([receiverId, senderId])
@@ -436,7 +447,7 @@ model Story {
   createdAt DateTime       @default(now())
   expiresAt DateTime
 
-  user      User            @relation(fields: [userId], references: [id])
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   views     StoryView[]
   reactions StoryReaction[]
 
@@ -450,8 +461,8 @@ model StoryView {
   viewerId  String
   createdAt DateTime @default(now())
 
-  story  Story @relation(fields: [storyId], references: [id])
-  viewer User  @relation(fields: [viewerId], references: [id])
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, viewerId])
 }
@@ -463,8 +474,8 @@ model StoryReaction {
   emoji     String
   createdAt DateTime @default(now())
 
-  story Story @relation(fields: [storyId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, userId])
 }

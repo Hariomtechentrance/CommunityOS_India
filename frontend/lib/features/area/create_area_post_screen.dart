@@ -321,6 +321,11 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
                       label: Text('My pincode only'),
                       icon: Icon(Icons.local_post_office, size: 18),
                     ),
+                    ButtonSegment(
+                      value: AreaPostVisibility.allIndia,
+                      label: Text('All over India'),
+                      icon: Icon(Icons.public, size: 18),
+                    ),
                   ],
                   selected: {_visibility},
                   onSelectionChanged: (selection) =>
@@ -347,6 +352,13 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
                     'You haven\'t saved a pincode yet, so this will behave like '
                     '"Nearby" until you add one in My Profile.',
                     style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                if (_visibility == AreaPostVisibility.allIndia) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Visible to every user across India, not just your area.',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
                 const SizedBox(height: 16),

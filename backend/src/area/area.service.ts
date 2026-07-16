@@ -9,6 +9,9 @@ import { EmergencyAlertService } from './emergency-alert.service';
 const EARTH_RADIUS_KM = 6371;
 /** How close (in km) counts as "nearby" for cross-pincode emergency reach. */
 const EMERGENCY_NEARBY_KM = 0.1;
+/** Matches the create-post radius slider's max (see CreateAreaPostScreen) -
+ * the widest an author can ever set radiusKm to. */
+const MAX_NEARBY_RADIUS_KM = 25;
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -95,6 +98,7 @@ export class AreaService {
     viewer: { pincode: string | null | undefined; latitude: number | null | undefined; longitude: number | null | undefined },
   ): boolean {
     if (viewerUserId && post.userId === viewerUserId) return true;
+    if (post.visibility === AreaPostVisibility.ALL_INDIA) return true;
 
     if (
       post.radiusKm != null &&
@@ -167,6 +171,13 @@ export class AreaService {
    * EMERGENCY_SOS gets one extra leg on top: also reachable within
    * EMERGENCY_NEARBY_KM even across a pincode boundary, since urgent safety
    * posts shouldn't stop at an administrative line.
+   *
+   * A post with an author-set `radiusKm` (NEARBY visibility) must reach
+   * every viewer within that distance too, regardless of area/pincode -
+   * two neighbours a few streets apart can easily land in different
+   * pincodes. This DB-level leg only narrows candidates down to the widest
+   * possible radius (MAX_NEARBY_RADIUS_KM); `isVisibleTo` below then applies
+   * each post's own exact radiusKm/haversine cutoff.
    */
   private reachClauses(viewer: {
     pincode: string | null | undefined;
@@ -178,13 +189,22 @@ export class AreaService {
       clauses.push({ pincode: viewer.pincode });
     }
     if (viewer.latitude != null && viewer.longitude != null) {
-      const latDelta = EMERGENCY_NEARBY_KM / 111;
-      const lngDelta =
+      const emergLatDelta = EMERGENCY_NEARBY_KM / 111;
+      const emergLngDelta =
         EMERGENCY_NEARBY_KM / (111 * Math.cos((viewer.latitude * Math.PI) / 180) || 1);
       clauses.push({
         kind: AreaPostKind.EMERGENCY_SOS,
-        latitude: { gte: viewer.latitude - latDelta, lte: viewer.latitude + latDelta },
-        longitude: { gte: viewer.longitude - lngDelta, lte: viewer.longitude + lngDelta },
+        latitude: { gte: viewer.latitude - emergLatDelta, lte: viewer.latitude + emergLatDelta },
+        longitude: { gte: viewer.longitude - emergLngDelta, lte: viewer.longitude + emergLngDelta },
+      });
+
+      const maxLatDelta = MAX_NEARBY_RADIUS_KM / 111;
+      const maxLngDelta =
+        MAX_NEARBY_RADIUS_KM / (111 * Math.cos((viewer.latitude * Math.PI) / 180) || 1);
+      clauses.push({
+        radiusKm: { not: null },
+        latitude: { gte: viewer.latitude - maxLatDelta, lte: viewer.latitude + maxLatDelta },
+        longitude: { gte: viewer.longitude - maxLngDelta, lte: viewer.longitude + maxLngDelta },
       });
     }
     return clauses;
@@ -202,6 +222,7 @@ export class AreaService {
       where: {
         OR: [
           { area: { equals: area, mode: 'insensitive' } },
+          { visibility: AreaPostVisibility.ALL_INDIA },
           ...this.reachClauses(viewer),
         ],
         ...(kind ? { kind } : {}),

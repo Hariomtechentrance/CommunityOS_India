@@ -24,6 +24,10 @@ export class UsersService {
     return this.prisma.user.create({ data: { phone } });
   }
 
+  markLoggedIn(userId: string) {
+    return this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+  }
+
   async updateLocation(userId: string, dto: UpdateLocationDto) {
     let area = dto.area;
     let lat = dto.lat;

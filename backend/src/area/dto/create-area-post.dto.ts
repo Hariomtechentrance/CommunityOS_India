@@ -23,7 +23,7 @@ const AREA_POST_KINDS = [
   'EMERGENCY_SOS',
 ] as const;
 
-const AREA_POST_VISIBILITIES = ['PINCODE_ONLY', 'NEARBY'] as const;
+const AREA_POST_VISIBILITIES = ['PINCODE_ONLY', 'NEARBY', 'ALL_INDIA'] as const;
 
 const EMERGENCY_CATEGORIES = [
   'ACCIDENT',
@@ -78,7 +78,7 @@ export class CreateAreaPostDto {
     example: 5,
     description:
       'Broadcast radius in km for NEARBY-visibility posts - only viewers within this ' +
-      "distance of the post's location will see it. Ignored for PINCODE_ONLY.",
+      "distance of the post's location will see it. Ignored for PINCODE_ONLY/ALL_INDIA.",
   })
   @IsOptional()
   @IsNumber()

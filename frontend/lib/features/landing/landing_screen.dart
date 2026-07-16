@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme.dart';
+
 class _Pillar {
   final IconData icon;
   final String title;
@@ -109,7 +111,18 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
         slivers: [
           SliverAppBar(
             floating: true,
-            title: const Text('CommunityOS India'),
+            backgroundColor: nikatScaffoldBg,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset('assets/images/nikat_logo.jpg', height: 34, width: 34),
+                ),
+                const SizedBox(width: 10),
+                const Text('NIKAT'),
+              ],
+            ),
             actions: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -120,35 +133,31 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
               ),
             ],
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+          SliverToBoxAdapter(child: _HeroSection()),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 40, 24, 8),
+            sliver: SliverToBoxAdapter(
               child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    children: [
-                      Text(
-                        'The Operating System for Every Indian Locality',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'One verified digital space for every apartment, society, colony, '
-                        'and locality in India - replacing WhatsApp groups, paper notices, '
-                        'and phone calls with a single AI-powered community platform.',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: () => context.push('/login'),
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text('Get started'),
-                      ),
-                    ],
-                  ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Everything your locality needs, in one app',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: nikatNavy,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'A growing set of modules built for Indian communities.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(color: Colors.black54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -158,7 +167,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 340,
-                mainAxisExtent: 220,
+                mainAxisExtent: 230,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
@@ -168,8 +177,112 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 48)),
+          const SliverToBoxAdapter(child: SizedBox(height: 64)),
         ],
+      ),
+    );
+  }
+}
+
+class _HeroSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(gradient: nikatHeroGradient),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: -60,
+            right: -60,
+            child: _GlowCircle(color: nikatOrange.withValues(alpha: 0.25), size: 220),
+          ),
+          Positioned(
+            bottom: -80,
+            left: -40,
+            child: _GlowCircle(color: Colors.white.withValues(alpha: 0.06), size: 260),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/images/nikat_logo.jpg',
+                        height: 84,
+                        width: 84,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'The Operating System for Every Indian Locality',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'One verified digital space for every apartment, society, colony, '
+                      'and locality in India - replacing WhatsApp groups, paper notices, '
+                      'and phone calls with a single AI-powered community platform.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => context.push('/login'),
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text('Get started'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => context.push('/login'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.6)),
+                          ),
+                          child: const Text('Sign in'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowCircle extends StatelessWidget {
+  final Color color;
+  final double size;
+
+  const _GlowCircle({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
     );
   }
@@ -184,48 +297,60 @@ class _PillarCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(pillar.icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    pillar.title,
-                    style: Theme.of(context).textTheme.titleMedium,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: nikatNavy.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Icon(pillar.icon, color: nikatNavy, size: 22),
                 ),
-                Chip(
-                  label: Text(pillar.live ? 'Live' : 'Coming soon'),
-                  backgroundColor: pillar.live
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : Colors.grey.withValues(alpha: 0.15),
-                  labelStyle: TextStyle(
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
                     color: pillar.live
-                        ? Colors.green.shade800
-                        : Colors.grey.shade700,
-                    fontSize: 11,
+                        ? nikatOrange.withValues(alpha: 0.12)
+                        : nikatNavy.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+                  child: Text(
+                    pillar.live ? 'Live' : 'Coming soon',
+                    style: TextStyle(
+                      color: pillar.live ? nikatOrange : Colors.black45,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
+            Text(
+              pillar.title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700, color: nikatNavy),
+            ),
+            const SizedBox(height: 6),
             Text(
               pillar.description,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black54),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             ...pillar.features.map(
               (f) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.check, size: 14),
+                    Icon(Icons.check_circle, size: 14, color: nikatOrange),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(

@@ -125,14 +125,28 @@ String emergencyCategoryLabel(EmergencyCategory category) {
   }
 }
 
-enum AreaPostVisibility { pincodeOnly, nearby }
+enum AreaPostVisibility { pincodeOnly, nearby, allIndia }
 
 AreaPostVisibility areaPostVisibilityFromJson(String? value) {
-  return value == 'PINCODE_ONLY' ? AreaPostVisibility.pincodeOnly : AreaPostVisibility.nearby;
+  switch (value) {
+    case 'PINCODE_ONLY':
+      return AreaPostVisibility.pincodeOnly;
+    case 'ALL_INDIA':
+      return AreaPostVisibility.allIndia;
+    default:
+      return AreaPostVisibility.nearby;
+  }
 }
 
 String areaPostVisibilityToJson(AreaPostVisibility visibility) {
-  return visibility == AreaPostVisibility.pincodeOnly ? 'PINCODE_ONLY' : 'NEARBY';
+  switch (visibility) {
+    case AreaPostVisibility.pincodeOnly:
+      return 'PINCODE_ONLY';
+    case AreaPostVisibility.allIndia:
+      return 'ALL_INDIA';
+    case AreaPostVisibility.nearby:
+      return 'NEARBY';
+  }
 }
 
 class AreaPost {

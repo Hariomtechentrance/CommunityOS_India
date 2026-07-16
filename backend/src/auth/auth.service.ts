@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -10,6 +11,7 @@ import { ListingCategory, MembershipRole, MembershipStatus, PostType } from '@pr
 import type { App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { PrismaService } from '../prisma/prisma.service';
+import { sanitizeUser } from '../users/sanitize-user';
 import { UsersService } from '../users/users.service';
 import { FIREBASE_ADMIN } from './firebase-admin.provider';
 
@@ -44,9 +46,14 @@ export class AuthService {
     }
 
     const user = await this.users.findOrCreateByPhone(phone);
+    if (user.isSuspended) {
+      throw new ForbiddenException('This account has been suspended');
+    }
+
+    await this.users.markLoggedIn(user.id);
     const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
 
-    return { accessToken, user };
+    return { accessToken, user: sanitizeUser({ ...user, lastLoginAt: new Date() }) };
   }
 
   /**
@@ -81,7 +88,7 @@ export class AuthService {
     });
 
     const accessToken = await this.jwt.signAsync({ sub: demoUser.id, phone: demoUser.phone });
-    return { accessToken, user: demoUser, society, membership };
+    return { accessToken, user: sanitizeUser(demoUser), society, membership };
   }
 
   /**
@@ -105,7 +112,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
     const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
-    return { accessToken, user };
+    return { accessToken, user: sanitizeUser(user) };
   }
 
   private async findOrCreateDemoSociety() {

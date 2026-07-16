@@ -18,6 +18,7 @@ class SessionState {
   const SessionState({this.token, this.user, this.society, this.membership});
 
   bool get isAuthenticated => token != null && user != null;
+  bool get isSuperAdmin => user?.isSuperAdmin ?? false;
   bool get hasLocationProfile => user?.hasLocationProfile ?? false;
   bool get hasSociety => society != null;
   bool get isApproved => membership?.status == MembershipStatus.approved;

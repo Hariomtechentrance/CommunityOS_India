@@ -11,7 +11,9 @@ import '../../core/api_client.dart';
 import '../../core/google_signin_button.dart' as gsi_button;
 import '../../core/google_signin_config.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/theme.dart';
 import 'auth_repository.dart';
+import 'phone_verification.dart';
 
 class OtpRequestScreen extends ConsumerStatefulWidget {
   const OtpRequestScreen({super.key});
@@ -93,11 +95,40 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
     });
     try {
       final phone = _phoneController.text.trim();
-      final confirmationResult = _googlePending
-          ? await FirebaseAuth.instance.currentUser!.linkWithPhoneNumber(phone)
-          : await FirebaseAuth.instance.signInWithPhoneNumber(phone);
-      if (!mounted) return;
-      context.push('/login/verify', extra: confirmationResult);
+      final isLinking = _googlePending;
+      if (kIsWeb) {
+        final confirmationResult = isLinking
+            ? await FirebaseAuth.instance.currentUser!.linkWithPhoneNumber(phone)
+            : await FirebaseAuth.instance.signInWithPhoneNumber(phone);
+        if (!mounted) return;
+        context.push('/login/verify', extra: PhoneVerificationPending.web(confirmationResult));
+      } else {
+        // Android/iOS have no ConfirmationResult - verifyPhoneNumber reports
+        // back via callbacks instead, with codeSent carrying the id needed
+        // to confirm the code on the next screen.
+        await FirebaseAuth.instance.verifyPhoneNumber(
+          phoneNumber: phone,
+          verificationCompleted: (PhoneAuthCredential credential) async {
+            final userCredential = isLinking
+                ? await FirebaseAuth.instance.currentUser!.linkWithCredential(credential)
+                : await FirebaseAuth.instance.signInWithCredential(credential);
+            if (userCredential.user != null) {
+              await completeFirebaseSignIn(ref, userCredential.user!);
+            }
+          },
+          verificationFailed: (FirebaseAuthException e) {
+            if (mounted) setState(() => _error = e.message ?? 'Verification failed');
+          },
+          codeSent: (String verificationId, int? resendToken) {
+            if (!mounted) return;
+            context.push(
+              '/login/verify',
+              extra: PhoneVerificationPending.native(verificationId, isLinking: isLinking),
+            );
+          },
+          codeAutoRetrievalTimeout: (String verificationId) {},
+        );
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -115,21 +146,54 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(gradient: nikatHeroGradient),
+        child: Center(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: nikatNavyDark.withValues(alpha: 0.3),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
+                    ),
+                  ],
+                ),
+                child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('CommunityOS India', style: Theme.of(context).textTheme.headlineMedium),
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset('assets/images/nikat_logo.jpg', height: 72, width: 72),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'NIKAT',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.w800, color: nikatNavy),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   _googlePending
                       ? 'Almost done - verify your phone number to finish signing in'
                       : 'Enter your phone number to continue',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
                 if (!_googlePending && kIsWeb && _googleReady) ...[
@@ -172,6 +236,8 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                       : const Text('Send OTP'),
                 ),
               ],
+                ),
+              ),
             ),
           ),
         ),

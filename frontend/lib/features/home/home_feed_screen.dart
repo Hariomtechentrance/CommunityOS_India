@@ -77,7 +77,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user?.area ?? 'CommunityOS India'),
+        title: Text(user?.area ?? 'NIKAT'),
         actions: [
           IconButton(
             icon: const Icon(Icons.map_outlined),

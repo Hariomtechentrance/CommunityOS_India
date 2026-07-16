@@ -11,6 +11,10 @@ class AppUser {
   final double? latitude;
   final double? longitude;
   final bool verified;
+  final bool isSuperAdmin;
+  final bool isSuspended;
+  final DateTime? lastLoginAt;
+  final DateTime? createdAt;
 
   AppUser({
     required this.id,
@@ -25,6 +29,10 @@ class AppUser {
     this.latitude,
     this.longitude,
     this.verified = false,
+    this.isSuperAdmin = false,
+    this.isSuspended = false,
+    this.lastLoginAt,
+    this.createdAt,
   });
 
   /// Whether this user has completed the post-login location onboarding.
@@ -43,6 +51,13 @@ class AppUser {
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
         verified: json['verified'] as bool? ?? false,
+        isSuperAdmin: json['isSuperAdmin'] as bool? ?? false,
+        isSuspended: json['isSuspended'] as bool? ?? false,
+        lastLoginAt: json['lastLoginAt'] != null
+            ? DateTime.tryParse(json['lastLoginAt'] as String)
+            : null,
+        createdAt:
+            json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -57,5 +72,8 @@ class AppUser {
         'area': area,
         'latitude': latitude,
         'longitude': longitude,
+        'isSuperAdmin': isSuperAdmin,
+        'isSuspended': isSuspended,
+        'lastLoginAt': lastLoginAt?.toIso8601String(),
       };
 }

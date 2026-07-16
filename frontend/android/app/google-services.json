@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "49536469012",
+    "project_id": "community-os-india",
+    "storage_bucket": "community-os-india.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49536469012:android:0fa9d0c231e4953f64bf01",
+        "android_client_info": {
+          "package_name": "com.communityos.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "49536469012-q10t985bt0hkak3423fmg5hhnck816re.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.communityos.app",
+            "certificate_hash": "65a374dcfa9390c9e1e02fe1e9fb98f9b8d5f0cc"
+          }
+        },
+        {
+          "client_id": "49536469012-99gurs6d1hjvcms1jj8s5j611us6i25f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAo4eBkL_0Y6ErOAWGLSQBiC6rVUYQcWgE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "49536469012-99gurs6d1hjvcms1jj8s5j611us6i25f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

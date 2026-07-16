@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DetectAreaDto } from './dto/detect-area.dto';
+import { sanitizeUser } from './sanitize-user';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
@@ -16,8 +17,9 @@ export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Get()
-  me(@CurrentUser() user: { userId: string }) {
-    return this.users.findById(user.userId);
+  async me(@CurrentUser() user: { userId: string }) {
+    const found = await this.users.findById(user.userId);
+    return found ? sanitizeUser(found) : found;
   }
 
   @Patch('location')

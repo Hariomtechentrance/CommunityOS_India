@@ -18,7 +18,7 @@ class SocietyHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(society?.name ?? 'CommunityOS India'),
+        title: Text(society?.name ?? 'NIKAT'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
