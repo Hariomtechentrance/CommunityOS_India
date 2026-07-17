@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/api_client.dart';
+import '../../core/locale/locale_controller.dart';
 import '../../core/media_upload_service.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/widgets/max_width_box.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/area_post.dart';
 import '../../models/user.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -119,6 +121,11 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
       appBar: AppBar(
         title: const Text('My profile'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.language),
+            tooltip: AppLocalizations.of(context)!.language,
+            onPressed: () => _showLanguagePicker(context, ref),
+          ),
           IconButton(
             icon: const Icon(Icons.bookmark_border),
             tooltip: 'Saved posts',
@@ -297,6 +304,33 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
       ),
     );
   }
+}
+
+Future<void> _showLanguagePicker(BuildContext context, WidgetRef ref) async {
+  final l10n = AppLocalizations.of(context)!;
+  final current = ref.read(localeControllerProvider).value;
+  final choice = await showDialog<Locale?>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: Text(l10n.chooseLanguage),
+      children: [
+        RadioListTile<Locale?>(
+          value: const Locale('en'),
+          groupValue: current,
+          title: Text(l10n.languageEnglish),
+          onChanged: (v) => Navigator.of(context).pop(v),
+        ),
+        RadioListTile<Locale?>(
+          value: const Locale('hi'),
+          groupValue: current,
+          title: Text(l10n.languageHindi),
+          onChanged: (v) => Navigator.of(context).pop(v),
+        ),
+      ],
+    ),
+  );
+  if (choice == current) return;
+  await ref.read(localeControllerProvider.notifier).setLocale(choice);
 }
 
 class _NeighbourCallButton extends ConsumerWidget {

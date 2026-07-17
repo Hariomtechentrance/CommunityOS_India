@@ -1,0 +1,39 @@
+{
+  "@@locale": "hi",
+
+  "appName": "NIKAT",
+  "landingTagline": "हर भारतीय इलाके के लिए ऑपरेटिंग सिस्टम",
+  "landingDescription": "हर अपार्टमेंट, सोसाइटी, कॉलोनी और इलाके के लिए एक सत्यापित डिजिटल स्थान - व्हाट्सएप ग्रुप्स, कागज़ी नोटिस और फ़ोन कॉल्स की जगह एक ही AI-संचालित सामुदायिक प्लेटफ़ॉर्म।",
+  "getStarted": "शुरू करें",
+  "signIn": "साइन इन करें",
+  "login": "लॉग इन",
+
+  "phoneNumberLabel": "फ़ोन नंबर",
+  "enterPhoneToContinue": "जारी रखने के लिए अपना फ़ोन नंबर दर्ज करें",
+  "sendOtp": "OTP भेजें",
+  "verifyOtp": "OTP सत्यापित करें",
+  "enterCodeSentToPhone": "अपने फ़ोन पर भेजा गया कोड दर्ज करें",
+  "verify": "सत्यापित करें",
+  "didntReceiveCodeResend": "कोड नहीं मिला? फिर से भेजें",
+  "cancelBackToMainPage": "रद्द करें और मुख्य पेज पर जाएं",
+
+  "navHome": "होम",
+  "navExplore": "एक्सप्लोर",
+  "navReels": "रील्स",
+  "navChats": "चैट्स",
+  "navProfile": "प्रोफ़ाइल",
+
+  "actionSave": "सेव करें",
+  "actionCancel": "रद्द करें",
+  "actionContinue": "जारी रखें",
+  "actionDelete": "हटाएं",
+  "actionEdit": "संपादित करें",
+  "actionSubmit": "जमा करें",
+  "actionShare": "शेयर करें",
+  "actionComment": "टिप्पणी",
+
+  "language": "भाषा",
+  "chooseLanguage": "अपनी भाषा चुनें",
+  "languageEnglish": "English (अंग्रेज़ी)",
+  "languageHindi": "हिंदी"
+}

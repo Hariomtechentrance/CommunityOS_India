@@ -1,0 +1,41 @@
+{
+  "@@locale": "en",
+
+  "appName": "NIKAT",
+  "@appName": {"description": "App name, shown on the landing screen and app bar"},
+
+  "landingTagline": "The Operating System for Every Indian Locality",
+  "landingDescription": "One verified digital space for every apartment, society, colony, and locality in India - replacing WhatsApp groups, paper notices, and phone calls with a single AI-powered community platform.",
+  "getStarted": "Get started",
+  "signIn": "Sign in",
+  "login": "Login",
+
+  "phoneNumberLabel": "Phone number",
+  "enterPhoneToContinue": "Enter your phone number to continue",
+  "sendOtp": "Send OTP",
+  "verifyOtp": "Verify OTP",
+  "enterCodeSentToPhone": "Enter the code sent to your phone",
+  "verify": "Verify",
+  "didntReceiveCodeResend": "Didn't receive the code? Resend",
+  "cancelBackToMainPage": "Cancel and go back to main page",
+
+  "navHome": "Home",
+  "navExplore": "Explore",
+  "navReels": "Reels",
+  "navChats": "Chats",
+  "navProfile": "Profile",
+
+  "actionSave": "Save",
+  "actionCancel": "Cancel",
+  "actionContinue": "Continue",
+  "actionDelete": "Delete",
+  "actionEdit": "Edit",
+  "actionSubmit": "Submit",
+  "actionShare": "Share",
+  "actionComment": "Comment",
+
+  "language": "Language",
+  "chooseLanguage": "Choose your language",
+  "languageEnglish": "English",
+  "languageHindi": "हिंदी (Hindi)"
+}

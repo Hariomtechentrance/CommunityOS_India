@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class _Pillar {
   final IconData icon;
@@ -128,7 +129,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: FilledButton(
                   onPressed: () => context.push('/login'),
-                  child: const Text('Login'),
+                  child: Text(AppLocalizations.of(context)!.login),
                 ),
               ),
             ],
@@ -220,7 +221,7 @@ class _HeroSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'The Operating System for Every Indian Locality',
+                      AppLocalizations.of(context)!.landingTagline,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -230,9 +231,7 @@ class _HeroSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'One verified digital space for every apartment, society, colony, '
-                      'and locality in India - replacing WhatsApp groups, paper notices, '
-                      'and phone calls with a single AI-powered community platform.',
+                      AppLocalizations.of(context)!.landingDescription,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Colors.white.withValues(alpha: 0.85),
                           ),
@@ -247,7 +246,7 @@ class _HeroSection extends StatelessWidget {
                         FilledButton.icon(
                           onPressed: () => context.push('/login'),
                           icon: const Icon(Icons.arrow_forward),
-                          label: const Text('Get started'),
+                          label: Text(AppLocalizations.of(context)!.getStarted),
                         ),
                         OutlinedButton(
                           onPressed: () => context.push('/login'),
@@ -255,7 +254,7 @@ class _HeroSection extends StatelessWidget {
                             foregroundColor: Colors.white,
                             side: BorderSide(color: Colors.white.withValues(alpha: 0.6)),
                           ),
-                          child: const Text('Sign in'),
+                          child: Text(AppLocalizations.of(context)!.signIn),
                         ),
                       ],
                     ),

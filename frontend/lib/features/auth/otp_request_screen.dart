@@ -12,6 +12,7 @@ import '../../core/google_signin_button.dart' as gsi_button;
 import '../../core/google_signin_config.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'auth_repository.dart';
 import 'phone_verification.dart';
 
@@ -191,7 +192,7 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                 Text(
                   _googlePending
                       ? 'Almost done - verify your phone number to finish signing in'
-                      : 'Enter your phone number to continue',
+                      : AppLocalizations.of(context)!.enterPhoneToContinue,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.black54),
                 ),
@@ -214,10 +215,10 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                 TextField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone number',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.phoneNumberLabel,
                     hintText: '+919876543210',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 if (_error != null) ...[
@@ -233,7 +234,7 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Send OTP'),
+                      : Text(AppLocalizations.of(context)!.sendOtp),
                 ),
               ],
                 ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'phone_verification.dart';
 
 class OtpVerifyScreen extends ConsumerStatefulWidget {
@@ -90,7 +91,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                     Icon(Icons.mark_email_read_outlined, color: nikatOrange, size: 40),
                     const SizedBox(height: 12),
                     Text(
-                      'Verify OTP',
+                      AppLocalizations.of(context)!.verifyOtp,
                       textAlign: TextAlign.center,
                       style: Theme.of(context)
                           .textTheme
@@ -98,10 +99,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                           ?.copyWith(fontWeight: FontWeight.w800, color: nikatNavy),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Enter the code sent to your phone',
+                    Text(
+                      AppLocalizations.of(context)!.enterCodeSentToPhone,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.black54),
+                      style: const TextStyle(color: Colors.black54),
                     ),
                     const SizedBox(height: 24),
                     TextField(
@@ -131,7 +132,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Verify'),
+                          : Text(AppLocalizations.of(context)!.verify),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
@@ -148,11 +149,11 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                                 context.go('/login');
                               }
                             },
-                      child: const Text("Didn't receive the code? Resend"),
+                      child: Text(AppLocalizations.of(context)!.didntReceiveCodeResend),
                     ),
                     TextButton(
                       onPressed: _loading ? null : () => context.go('/'),
-                      child: const Text('Cancel and go back to main page'),
+                      child: Text(AppLocalizations.of(context)!.cancelBackToMainPage),
                     ),
                   ],
                 ),
