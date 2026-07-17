@@ -35,9 +35,14 @@ class EmergencyService {
   }
 
   /// Best-effort - push registration silently does nothing if the user
-  /// denies permission, or if the VAPID key hasn't been configured yet.
+  /// denies permission, or (web only) if the VAPID key hasn't been
+  /// configured yet. VAPID is a Web Push concept - native Android/iOS
+  /// tokens don't need one, so gating this on it unconditionally (as
+  /// opposed to only on web) silently broke push registration - and with it
+  /// every native feature that depends on the token (incoming-call pushes,
+  /// missed-call notifications, SOS alerts to a closed app) - entirely.
   Future<void> registerPushToken(UserRepository userRepository) async {
-    if (vapidKey.startsWith('REPLACE_WITH')) return;
+    if (kIsWeb && vapidKey.startsWith('REPLACE_WITH')) return;
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
