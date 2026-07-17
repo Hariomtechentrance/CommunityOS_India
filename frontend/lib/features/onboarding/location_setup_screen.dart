@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -60,7 +62,12 @@ class _LocationSetupScreenState extends ConsumerState<LocationSetupScreen> {
         throw Exception('Location permission denied.');
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
       final area = await ref.read(userRepositoryProvider).detectArea(
             lat: position.latitude,
             lng: position.longitude,
@@ -71,6 +78,11 @@ class _LocationSetupScreenState extends ConsumerState<LocationSetupScreen> {
         );
       }
       _areaController.text = area;
+    } on TimeoutException {
+      setState(
+        () => _error =
+            'Getting your location is taking too long - check GPS/location is on, or type your area in below.',
+      );
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {

@@ -1,7 +1,9 @@
 import { Inject, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
@@ -12,18 +14,21 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { Server, Socket } from 'socket.io';
 import { FIREBASE_ADMIN } from '../auth/firebase-admin.provider';
 import { PrismaService } from '../prisma/prisma.service';
+import { corsOptions } from '../common/socket-cors';
 
 /**
  * Pure signaling relay for in-app calling - no media ever passes through the
  * server, only WebRTC offer/answer/ICE payloads, keyed by the caller's/
- * callee's authenticated `userId` (the client reads this from its own
- * session). If the target user isn't currently connected, the caller gets
- * `call:unavailable` AND, if the target has a push token, a missed-call
- * notification is sent so they can call back once they open the app -
- * previously this case reached nobody at all.
+ * callee's authenticated `userId`. That identity comes from a JWT verified
+ * at connection time (`handshake.auth.token`), not from anything the client
+ * claims in a message payload - otherwise any client could register as, and
+ * receive calls for, an arbitrary other user. If the target user isn't
+ * currently connected, the caller gets `call:unavailable` AND, if the target
+ * has a push token, a missed-call notification is sent so they can call back
+ * once they open the app - previously this case reached nobody at all.
  */
-@WebSocketGateway({ cors: { origin: true } })
-export class CallsGateway implements OnGatewayDisconnect {
+@WebSocketGateway({ cors: corsOptions })
+export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(CallsGateway.name);
 
   @WebSocketServer()
@@ -34,8 +39,24 @@ export class CallsGateway implements OnGatewayDisconnect {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
     @Inject(FIREBASE_ADMIN) private readonly firebaseApp: App | null,
   ) {}
+
+  handleConnection(client: Socket) {
+    const token = client.handshake.auth?.token as string | undefined;
+    if (!token) {
+      client.disconnect(true);
+      return;
+    }
+    try {
+      const payload = this.jwt.verify<{ sub: string }>(token);
+      this.profileToSocket.set(payload.sub, client.id);
+      this.socketToProfile.set(client.id, payload.sub);
+    } catch {
+      client.disconnect(true);
+    }
+  }
 
   handleDisconnect(client: Socket) {
     const profileId = this.socketToProfile.get(client.id);
@@ -45,28 +66,18 @@ export class CallsGateway implements OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('register')
-  handleRegister(
-    @MessageBody() data: { profileId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    this.profileToSocket.set(data.profileId, client.id);
-    this.socketToProfile.set(client.id, data.profileId);
-  }
-
   @SubscribeMessage('call:invite')
-  handleInvite(
-    @MessageBody() data: { toProfileId: string; fromProfileId: string; fromName: string },
-    @ConnectedSocket() client: Socket,
-  ) {
+  handleInvite(@MessageBody() data: { toProfileId: string; fromName: string }, @ConnectedSocket() client: Socket) {
+    const fromProfileId = this.socketToProfile.get(client.id);
+    if (!fromProfileId) return;
     const targetSocketId = this.profileToSocket.get(data.toProfileId);
     if (!targetSocketId) {
       client.emit('call:unavailable', { toProfileId: data.toProfileId });
-      this.notifyMissedCall(data.toProfileId, data.fromProfileId, data.fromName).catch(() => {});
+      this.notifyMissedCall(data.toProfileId, fromProfileId, data.fromName).catch(() => {});
       return;
     }
     this.server.to(targetSocketId).emit('call:incoming', {
-      fromProfileId: data.fromProfileId,
+      fromProfileId,
       fromName: data.fromName,
     });
   }

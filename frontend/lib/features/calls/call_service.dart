@@ -37,15 +37,16 @@ class CallService {
     remoteRenderer.initialize();
     _socket = io.io(
       apiBaseUrl,
-      io.OptionBuilder().setTransports(['websocket']).build(),
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'token': apiClient.token})
+          .build(),
     );
     _registerListeners();
     _socket.connect();
   }
 
   void _registerListeners() {
-    _socket.onConnect((_) => _socket.emit('register', {'profileId': myProfileId}));
-
     _socket.on('call:incoming', (data) {
       _peerProfileId = data['fromProfileId'] as String;
       _peerName = data['fromName'] as String?;

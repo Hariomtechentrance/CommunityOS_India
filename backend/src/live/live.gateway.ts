@@ -1,12 +1,15 @@
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { corsOptions } from '../common/socket-cors';
 
 interface BroadcastInfo {
   profileId: string;
@@ -21,10 +24,13 @@ interface BroadcastInfo {
  * Pure signaling relay for one-to-many live streaming - mirrors CallsGateway's
  * pattern but fans a single broadcaster's offer out to N viewers instead of
  * 1:1. No media ever passes through the server, only WebRTC offer/answer/ICE
- * payloads and the "who's live right now" registry.
+ * payloads and the "who's live right now" registry. A caller's own identity
+ * always comes from their JWT-verified connection (`socketToProfile`), never
+ * from a client-claimed `profileId`/`fromProfileId` field - otherwise anyone
+ * could start a broadcast as another user, or read another viewer's stream.
  */
-@WebSocketGateway({ cors: { origin: true } })
-export class LiveGateway implements OnGatewayDisconnect {
+@WebSocketGateway({ cors: corsOptions })
+export class LiveGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -34,6 +40,23 @@ export class LiveGateway implements OnGatewayDisconnect {
   private readonly broadcasts = new Map<string, BroadcastInfo>();
   /** Viewer profileId -> broadcaster profileId they're currently watching. */
   private readonly viewerToBroadcast = new Map<string, string>();
+
+  constructor(private readonly jwt: JwtService) {}
+
+  handleConnection(client: Socket) {
+    const token = client.handshake.auth?.token as string | undefined;
+    if (!token) {
+      client.disconnect(true);
+      return;
+    }
+    try {
+      const payload = this.jwt.verify<{ sub: string }>(token);
+      this.profileToSocket.set(payload.sub, client.id);
+      this.socketToProfile.set(client.id, payload.sub);
+    } catch {
+      client.disconnect(true);
+    }
+  }
 
   handleDisconnect(client: Socket) {
     const profileId = this.socketToProfile.get(client.id);
@@ -52,12 +75,6 @@ export class LiveGateway implements OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('register')
-  handleRegister(@MessageBody() data: { profileId: string }, @ConnectedSocket() client: Socket) {
-    this.profileToSocket.set(data.profileId, client.id);
-    this.socketToProfile.set(client.id, data.profileId);
-  }
-
   /** Lists currently-live broadcasters for a given area, newest first. */
   listActive(area: string) {
     return [...this.broadcasts.values()]
@@ -74,10 +91,13 @@ export class LiveGateway implements OnGatewayDisconnect {
 
   @SubscribeMessage('live:start')
   handleStart(
-    @MessageBody() data: { profileId: string; name: string; area: string; title: string },
+    @MessageBody() data: { name: string; area: string; title: string },
+    @ConnectedSocket() client: Socket,
   ) {
-    this.broadcasts.set(data.profileId, {
-      profileId: data.profileId,
+    const profileId = this.socketToProfile.get(client.id);
+    if (!profileId) return;
+    this.broadcasts.set(profileId, {
+      profileId,
       name: data.name,
       area: data.area,
       title: data.title,
@@ -87,8 +107,10 @@ export class LiveGateway implements OnGatewayDisconnect {
   }
 
   @SubscribeMessage('live:stop')
-  handleStop(@MessageBody() data: { profileId: string }) {
-    this.stopBroadcast(data.profileId);
+  handleStop(@ConnectedSocket() client: Socket) {
+    const profileId = this.socketToProfile.get(client.id);
+    if (!profileId) return;
+    this.stopBroadcast(profileId);
   }
 
   private stopBroadcast(broadcasterProfileId: string) {
@@ -103,56 +125,63 @@ export class LiveGateway implements OnGatewayDisconnect {
 
   @SubscribeMessage('live:join')
   handleJoin(
-    @MessageBody() data: { broadcasterProfileId: string; viewerProfileId: string },
+    @MessageBody() data: { broadcasterProfileId: string },
+    @ConnectedSocket() client: Socket,
   ) {
+    const viewerProfileId = this.socketToProfile.get(client.id);
+    if (!viewerProfileId) return;
     const info = this.broadcasts.get(data.broadcasterProfileId);
     if (!info) {
-      this.relay('live:ended', data.viewerProfileId, {
+      this.relay('live:ended', viewerProfileId, {
         broadcasterProfileId: data.broadcasterProfileId,
       });
       return;
     }
-    info.viewerIds.add(data.viewerProfileId);
-    this.viewerToBroadcast.set(data.viewerProfileId, data.broadcasterProfileId);
-    this.relay('live:viewer-joined', data.broadcasterProfileId, {
-      viewerProfileId: data.viewerProfileId,
-    });
+    info.viewerIds.add(viewerProfileId);
+    this.viewerToBroadcast.set(viewerProfileId, data.broadcasterProfileId);
+    this.relay('live:viewer-joined', data.broadcasterProfileId, { viewerProfileId });
   }
 
   @SubscribeMessage('live:leave')
   handleLeave(
-    @MessageBody() data: { broadcasterProfileId: string; viewerProfileId: string },
+    @MessageBody() data: { broadcasterProfileId: string },
+    @ConnectedSocket() client: Socket,
   ) {
-    this.broadcasts.get(data.broadcasterProfileId)?.viewerIds.delete(data.viewerProfileId);
-    this.viewerToBroadcast.delete(data.viewerProfileId);
-    this.relay('live:viewer-left', data.broadcasterProfileId, {
-      viewerProfileId: data.viewerProfileId,
-    });
+    const viewerProfileId = this.socketToProfile.get(client.id);
+    if (!viewerProfileId) return;
+    this.broadcasts.get(data.broadcasterProfileId)?.viewerIds.delete(viewerProfileId);
+    this.viewerToBroadcast.delete(viewerProfileId);
+    this.relay('live:viewer-left', data.broadcasterProfileId, { viewerProfileId });
   }
 
   @SubscribeMessage('live:offer')
-  handleOffer(@MessageBody() data: { toProfileId: string; fromProfileId: string; offer: unknown }) {
-    this.relay('live:offer', data.toProfileId, { fromProfileId: data.fromProfileId, offer: data.offer });
+  handleOffer(
+    @MessageBody() data: { toProfileId: string; offer: unknown },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const fromProfileId = this.socketToProfile.get(client.id);
+    if (!fromProfileId) return;
+    this.relay('live:offer', data.toProfileId, { fromProfileId, offer: data.offer });
   }
 
   @SubscribeMessage('live:answer')
   handleAnswer(
-    @MessageBody() data: { toProfileId: string; fromProfileId: string; answer: unknown },
+    @MessageBody() data: { toProfileId: string; answer: unknown },
+    @ConnectedSocket() client: Socket,
   ) {
-    this.relay('live:answer', data.toProfileId, {
-      fromProfileId: data.fromProfileId,
-      answer: data.answer,
-    });
+    const fromProfileId = this.socketToProfile.get(client.id);
+    if (!fromProfileId) return;
+    this.relay('live:answer', data.toProfileId, { fromProfileId, answer: data.answer });
   }
 
   @SubscribeMessage('live:ice-candidate')
   handleIceCandidate(
-    @MessageBody() data: { toProfileId: string; fromProfileId: string; candidate: unknown },
+    @MessageBody() data: { toProfileId: string; candidate: unknown },
+    @ConnectedSocket() client: Socket,
   ) {
-    this.relay('live:ice-candidate', data.toProfileId, {
-      fromProfileId: data.fromProfileId,
-      candidate: data.candidate,
-    });
+    const fromProfileId = this.socketToProfile.get(client.id);
+    if (!fromProfileId) return;
+    this.relay('live:ice-candidate', data.toProfileId, { fromProfileId, candidate: data.candidate });
   }
 
   private relay(event: string, toProfileId: string, payload: Record<string, unknown>) {

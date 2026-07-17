@@ -20,12 +20,14 @@ class EmergencyService {
 
   final ValueNotifier<EmergencyAlertData?> incoming = ValueNotifier(null);
 
-  EmergencyService({required this.myUserId}) {
+  EmergencyService({required this.myUserId, required ApiClient apiClient}) {
     _socket = io.io(
       apiBaseUrl,
-      io.OptionBuilder().setTransports(['websocket']).build(),
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'token': apiClient.token})
+          .build(),
     );
-    _socket.onConnect((_) => _socket.emit('register', {'userId': myUserId}));
     _socket.on('alert:incoming', (data) {
       incoming.value = EmergencyAlertData.fromJson(Map<String, dynamic>.from(data as Map));
     });
@@ -54,7 +56,7 @@ class EmergencyService {
 final emergencyServiceProvider = Provider<EmergencyService?>((ref) {
   final user = ref.watch(sessionControllerProvider).value?.user;
   if (user == null) return null;
-  final service = EmergencyService(myUserId: user.id);
+  final service = EmergencyService(myUserId: user.id, apiClient: ref.read(apiClientProvider));
   service.registerPushToken(ref.read(userRepositoryProvider));
   ref.onDispose(service.dispose);
   return service;

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -26,6 +27,7 @@ export class CampaignsController {
     private readonly users: UsersService,
   ) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -40,6 +42,7 @@ export class CampaignsController {
     return this.campaigns.listMine(user.userId);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post(':id/checkout')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

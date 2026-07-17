@@ -2,7 +2,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { corsOptions } from './common/socket-cors';
 
 async function bootstrap() {
   // rawBody: true - the Razorpay webhook needs the exact raw request bytes
@@ -10,8 +12,11 @@ async function bootstrap() {
   // different signature and always fail verification.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
-  // Dev-only: allow the local Flutter web dev server (different origin/port) to call this API.
-  app.enableCors({ origin: true });
+  app.use(helmet());
+  // Restricted via CORS_ALLOWED_ORIGINS in production; allows any origin
+  // only when that env var is unset (local dev). See common/socket-cors.ts -
+  // native Android/iOS clients aren't affected by this either way.
+  app.enableCors(corsOptions);
   app.useWebSocketAdapter(new IoAdapter(app));
 
   app.useGlobalPipes(

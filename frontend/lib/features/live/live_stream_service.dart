@@ -64,14 +64,18 @@ class LiveStreamService {
   LiveStreamService({required this.myProfileId, required this.apiClient}) {
     remoteRenderer.initialize();
     localRenderer.initialize();
-    _socket = io.io(apiBaseUrl, io.OptionBuilder().setTransports(['websocket']).build());
+    _socket = io.io(
+      apiBaseUrl,
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'token': apiClient.token})
+          .build(),
+    );
     _registerListeners();
     _socket.connect();
   }
 
   void _registerListeners() {
-    _socket.onConnect((_) => _socket.emit('register', {'profileId': myProfileId}));
-
     // --- Broadcaster-side events ---
     _socket.on('live:viewer-joined', (data) async {
       final viewerProfileId = data['viewerProfileId'] as String;

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -28,6 +30,12 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Global request-rate ceiling - a generous default so normal browsing
+    // never trips it, with individual endpoints free to set tighter limits
+    // via @Throttle() (auth, campaign creation/checkout, search).
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 120 },
+    ]),
     PrismaModule,
     AdminModule,
     AuthModule,
@@ -52,6 +60,6 @@ import { CampaignsModule } from './campaigns/campaigns.module';
     CampaignsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

@@ -107,10 +107,14 @@ export class AuthService {
 
   /** Mints a fresh token for an existing demo identity - same permissive,
    * no-real-auth-required pattern as `loginAsDemo`, just for a known user
-   * instead of a brand new one. */
+   * instead of a brand new one. Restricted to `+91-demo-*` phones only -
+   * this is an unauthenticated endpoint, so without that check it would let
+   * anyone mint a valid token for *any* real user by ID (account takeover). */
   async demoLoginAs(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user || !user.phone.startsWith('+91-demo-')) {
+      throw new NotFoundException('User not found');
+    }
     const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
     return { accessToken, user: sanitizeUser(user) };
   }

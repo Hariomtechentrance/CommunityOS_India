@@ -30,6 +30,9 @@ class _ReelsFeedScreenState extends ConsumerState<ReelsFeedScreen> {
   int _currentIndex = 0;
   int _page = 1;
   bool _hasMore = false;
+  // Muted by default, like Instagram/Facebook Reels - a visible speaker icon
+  // lets the viewer opt into sound, and that choice carries across swipes.
+  bool _muted = true;
 
   @override
   void initState() {
@@ -71,6 +74,8 @@ class _ReelsFeedScreenState extends ConsumerState<ReelsFeedScreen> {
     }
   }
 
+  void _toggleMute() => setState(() => _muted = !_muted);
+
   Future<void> _openCreate() async {
     final posted = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const CreateReelScreen()),
@@ -105,6 +110,8 @@ class _ReelsFeedScreenState extends ConsumerState<ReelsFeedScreen> {
                 key: ValueKey(_reels[index].id),
                 reel: _reels[index],
                 isActive: index == _currentIndex,
+                muted: _muted,
+                onToggleMute: _toggleMute,
                 onChanged: (updated) => setState(() => _reels[index] = updated),
                 onDeleted: () =>
                     setState(() => _reels.removeWhere((r) => r.id == _reels[index].id)),
@@ -143,6 +150,8 @@ class _ReelsFeedScreenState extends ConsumerState<ReelsFeedScreen> {
 class _ReelPage extends ConsumerStatefulWidget {
   final Reel reel;
   final bool isActive;
+  final bool muted;
+  final VoidCallback onToggleMute;
   final ValueChanged<Reel> onChanged;
   final VoidCallback onDeleted;
 
@@ -150,6 +159,8 @@ class _ReelPage extends ConsumerStatefulWidget {
     super.key,
     required this.reel,
     required this.isActive,
+    required this.muted,
+    required this.onToggleMute,
     required this.onChanged,
     required this.onDeleted,
   });
@@ -172,6 +183,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
     final controller = VideoPlayerController.networkUrl(Uri.parse(widget.reel.videoUrl));
     await controller.initialize();
     controller.setLooping(true);
+    controller.setVolume(widget.muted ? 0 : 1);
     if (!mounted) {
       controller.dispose();
       return;
@@ -188,6 +200,9 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
       _controller!.play();
     } else if (!widget.isActive && oldWidget.isActive) {
       _controller!.pause();
+    }
+    if (widget.muted != oldWidget.muted) {
+      _controller!.setVolume(widget.muted ? 0 : 1);
     }
   }
 
@@ -259,6 +274,24 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
             )
           else
             const Center(child: CircularProgressIndicator(color: Colors.white)),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                // Sits below the parent header's "New reel" button (same
+                // top-right corner, ~60px tall) so the two don't overlap.
+                padding: const EdgeInsets.only(top: 60, right: 4),
+                child: IconButton(
+                  onPressed: widget.onToggleMute,
+                  icon: Icon(
+                    widget.muted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                    shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             left: 12,
             right: 80,

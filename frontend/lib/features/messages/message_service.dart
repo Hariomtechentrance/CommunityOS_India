@@ -16,12 +16,14 @@ class MessageService {
 
   final ValueNotifier<ChatMessage?> incoming = ValueNotifier(null);
 
-  MessageService({required this.myUserId}) {
+  MessageService({required this.myUserId, required ApiClient apiClient}) {
     _socket = io.io(
       apiBaseUrl,
-      io.OptionBuilder().setTransports(['websocket']).build(),
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'token': apiClient.token})
+          .build(),
     );
-    _socket.onConnect((_) => _socket.emit('register', {'userId': myUserId}));
     _socket.on('message:new', (data) {
       incoming.value = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
     });
@@ -36,7 +38,7 @@ class MessageService {
 final messageServiceProvider = Provider<MessageService?>((ref) {
   final user = ref.watch(sessionControllerProvider).value?.user;
   if (user == null) return null;
-  final service = MessageService(myUserId: user.id);
+  final service = MessageService(myUserId: user.id, apiClient: ref.read(apiClientProvider));
   ref.onDispose(service.dispose);
   return service;
 });
