@@ -283,6 +283,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'हिंदी (Hindi)'**
   String get languageHindi;
+
+  /// No description provided for @pillarsHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything your locality needs, in one app'**
+  String get pillarsHeadline;
+
+  /// No description provided for @pillarsSubheadline.
+  ///
+  /// In en, this message translates to:
+  /// **'A growing set of modules built for Indian communities.'**
+  String get pillarsSubheadline;
+
+  /// No description provided for @badgeLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get badgeLive;
+
+  /// No description provided for @badgeComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get badgeComingSoon;
+
+  /// No description provided for @pillarSocietyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Society Management'**
+  String get pillarSocietyTitle;
+
+  /// No description provided for @pillarSocietyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Notices, complaints, and verified membership approval for your society.'**
+  String get pillarSocietyDesc;
+
+  /// No description provided for @pillarSocietyFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Notices & announcements'**
+  String get pillarSocietyFeature1;
+
+  /// No description provided for @pillarSocietyFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaint tracking'**
+  String get pillarSocietyFeature2;
+
+  /// No description provided for @pillarSocietyFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Member approval workflow'**
+  String get pillarSocietyFeature3;
+
+  /// No description provided for @pillarCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get pillarCommunityTitle;
+
+  /// No description provided for @pillarCommunityDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts, questions, recommendations, polls, events, lost & found.'**
+  String get pillarCommunityDesc;
+
+  /// No description provided for @pillarCommunityFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts & discussions'**
+  String get pillarCommunityFeature1;
+
+  /// No description provided for @pillarCommunityFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Polls & events'**
+  String get pillarCommunityFeature2;
+
+  /// No description provided for @pillarCommunityFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost & found'**
+  String get pillarCommunityFeature3;
+
+  /// No description provided for @pillarMarketplaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hyperlocal Marketplace'**
+  String get pillarMarketplaceTitle;
+
+  /// No description provided for @pillarMarketplaceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy, sell, rent, donate and exchange within your locality.'**
+  String get pillarMarketplaceDesc;
+
+  /// No description provided for @pillarMarketplaceFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy & sell'**
+  String get pillarMarketplaceFeature1;
+
+  /// No description provided for @pillarMarketplaceFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Rent & donate'**
+  String get pillarMarketplaceFeature2;
+
+  /// No description provided for @pillarMarketplaceFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Second-hand goods'**
+  String get pillarMarketplaceFeature3;
+
+  /// No description provided for @pillarCommerceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Commerce'**
+  String get pillarCommerceTitle;
+
+  /// No description provided for @pillarCommerceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Every local business gets a page - residents book directly.'**
+  String get pillarCommerceDesc;
+
+  /// No description provided for @pillarCommerceFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Business directory'**
+  String get pillarCommerceFeature1;
+
+  /// No description provided for @pillarCommerceFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct booking'**
+  String get pillarCommerceFeature2;
+
+  /// No description provided for @pillarCommerceFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Ratings & reviews'**
+  String get pillarCommerceFeature3;
+
+  /// No description provided for @pillarAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get pillarAiTitle;
+
+  /// No description provided for @pillarAiDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask instead of searching - \"Find me a trusted plumber.\"'**
+  String get pillarAiDesc;
+
+  /// No description provided for @pillarAiFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural-language search'**
+  String get pillarAiFeature1;
+
+  /// No description provided for @pillarAiFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Trusted recommendations'**
+  String get pillarAiFeature2;
+
+  /// No description provided for @pillarAiFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability lookup'**
+  String get pillarAiFeature3;
+
+  /// No description provided for @pillarFestivalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Festival Module'**
+  String get pillarFestivalTitle;
+
+  /// No description provided for @pillarFestivalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Digitize festival donations, volunteering, and schedules.'**
+  String get pillarFestivalDesc;
+
+  /// No description provided for @pillarFestivalFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Donation tracking'**
+  String get pillarFestivalFeature1;
+
+  /// No description provided for @pillarFestivalFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Volunteer sign-up'**
+  String get pillarFestivalFeature2;
+
+  /// No description provided for @pillarFestivalFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Event schedules'**
+  String get pillarFestivalFeature3;
+
+  /// No description provided for @pillarEmergencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency SOS'**
+  String get pillarEmergencyTitle;
+
+  /// No description provided for @pillarEmergencyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'One button to alert family, neighbors, and security.'**
+  String get pillarEmergencyDesc;
+
+  /// No description provided for @pillarEmergencyFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap SOS'**
+  String get pillarEmergencyFeature1;
+
+  /// No description provided for @pillarEmergencyFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Neighbor alerts'**
+  String get pillarEmergencyFeature2;
+
+  /// No description provided for @pillarEmergencyFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Security notification'**
+  String get pillarEmergencyFeature3;
+
+  /// No description provided for @pillarHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Domestic Help'**
+  String get pillarHelpTitle;
+
+  /// No description provided for @pillarHelpDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Find trusted cooks, drivers, maids, and more.'**
+  String get pillarHelpDesc;
+
+  /// No description provided for @pillarHelpFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified helpers'**
+  String get pillarHelpFeature1;
+
+  /// No description provided for @pillarHelpFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability status'**
+  String get pillarHelpFeature2;
+
+  /// No description provided for @pillarHelpFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct contact'**
+  String get pillarHelpFeature3;
+
+  /// No description provided for @pillarJobsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Jobs'**
+  String get pillarJobsTitle;
+
+  /// No description provided for @pillarJobsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Hire and get hired within your locality.'**
+  String get pillarJobsDesc;
+
+  /// No description provided for @pillarJobsFeature1.
+  ///
+  /// In en, this message translates to:
+  /// **'Post a need'**
+  String get pillarJobsFeature1;
+
+  /// No description provided for @pillarJobsFeature2.
+  ///
+  /// In en, this message translates to:
+  /// **'Local hiring'**
+  String get pillarJobsFeature2;
+
+  /// No description provided for @pillarJobsFeature3.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick responses'**
+  String get pillarJobsFeature3;
 }
 
 class _AppLocalizationsDelegate

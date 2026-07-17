@@ -21,81 +21,71 @@ class _Pillar {
   });
 }
 
-const _pillars = [
-  _Pillar(
-    icon: Icons.apartment,
-    title: 'Society Management',
-    description:
-        'Notices, complaints, and verified membership approval for your society.',
-    features: [
-      'Notices & announcements',
-      'Complaint tracking',
-      'Member approval workflow',
-    ],
-    live: true,
-  ),
-  _Pillar(
-    icon: Icons.forum,
-    title: 'Community',
-    description:
-        'Posts, questions, recommendations, polls, events, lost & found.',
-    features: ['Posts & discussions', 'Polls & events', 'Lost & found'],
-    live: true,
-  ),
-  _Pillar(
-    icon: Icons.storefront,
-    title: 'Hyperlocal Marketplace',
-    description: 'Buy, sell, rent, donate and exchange within your locality.',
-    features: ['Buy & sell', 'Rent & donate', 'Second-hand goods'],
-    live: true,
-  ),
-  _Pillar(
-    icon: Icons.local_grocery_store,
-    title: 'Local Commerce',
-    description: 'Every local business gets a page - residents book directly.',
-    features: ['Business directory', 'Direct booking', 'Ratings & reviews'],
-    live: false,
-  ),
-  _Pillar(
-    icon: Icons.smart_toy,
-    title: 'AI Assistant',
-    description: 'Ask instead of searching - "Find me a trusted plumber."',
-    features: [
-      'Natural-language search',
-      'Trusted recommendations',
-      'Availability lookup',
-    ],
-    live: false,
-  ),
-  _Pillar(
-    icon: Icons.celebration,
-    title: 'Festival Module',
-    description: 'Digitize festival donations, volunteering, and schedules.',
-    features: ['Donation tracking', 'Volunteer sign-up', 'Event schedules'],
-    live: false,
-  ),
-  _Pillar(
-    icon: Icons.emergency,
-    title: 'Emergency SOS',
-    description: 'One button to alert family, neighbors, and security.',
-    features: ['One-tap SOS', 'Neighbor alerts', 'Security notification'],
-    live: false,
-  ),
-  _Pillar(
-    icon: Icons.cleaning_services,
-    title: 'Domestic Help',
-    description: 'Find trusted cooks, drivers, maids, and more.',
-    features: ['Verified helpers', 'Availability status', 'Direct contact'],
-    live: false,
-  ),
-  _Pillar(
-    icon: Icons.work,
-    title: 'Local Jobs',
-    description: 'Hire and get hired within your locality.',
-    features: ['Post a need', 'Local hiring', 'Quick responses'],
-    live: false,
-  ),
-];
+List<_Pillar> _buildPillars(AppLocalizations l10n) => [
+      _Pillar(
+        icon: Icons.apartment,
+        title: l10n.pillarSocietyTitle,
+        description: l10n.pillarSocietyDesc,
+        features: [l10n.pillarSocietyFeature1, l10n.pillarSocietyFeature2, l10n.pillarSocietyFeature3],
+        live: true,
+      ),
+      _Pillar(
+        icon: Icons.forum,
+        title: l10n.pillarCommunityTitle,
+        description: l10n.pillarCommunityDesc,
+        features: [l10n.pillarCommunityFeature1, l10n.pillarCommunityFeature2, l10n.pillarCommunityFeature3],
+        live: true,
+      ),
+      _Pillar(
+        icon: Icons.storefront,
+        title: l10n.pillarMarketplaceTitle,
+        description: l10n.pillarMarketplaceDesc,
+        features: [l10n.pillarMarketplaceFeature1, l10n.pillarMarketplaceFeature2, l10n.pillarMarketplaceFeature3],
+        live: true,
+      ),
+      _Pillar(
+        icon: Icons.local_grocery_store,
+        title: l10n.pillarCommerceTitle,
+        description: l10n.pillarCommerceDesc,
+        features: [l10n.pillarCommerceFeature1, l10n.pillarCommerceFeature2, l10n.pillarCommerceFeature3],
+        live: false,
+      ),
+      _Pillar(
+        icon: Icons.smart_toy,
+        title: l10n.pillarAiTitle,
+        description: l10n.pillarAiDesc,
+        features: [l10n.pillarAiFeature1, l10n.pillarAiFeature2, l10n.pillarAiFeature3],
+        live: false,
+      ),
+      _Pillar(
+        icon: Icons.celebration,
+        title: l10n.pillarFestivalTitle,
+        description: l10n.pillarFestivalDesc,
+        features: [l10n.pillarFestivalFeature1, l10n.pillarFestivalFeature2, l10n.pillarFestivalFeature3],
+        live: false,
+      ),
+      _Pillar(
+        icon: Icons.emergency,
+        title: l10n.pillarEmergencyTitle,
+        description: l10n.pillarEmergencyDesc,
+        features: [l10n.pillarEmergencyFeature1, l10n.pillarEmergencyFeature2, l10n.pillarEmergencyFeature3],
+        live: false,
+      ),
+      _Pillar(
+        icon: Icons.cleaning_services,
+        title: l10n.pillarHelpTitle,
+        description: l10n.pillarHelpDesc,
+        features: [l10n.pillarHelpFeature1, l10n.pillarHelpFeature2, l10n.pillarHelpFeature3],
+        live: false,
+      ),
+      _Pillar(
+        icon: Icons.work,
+        title: l10n.pillarJobsTitle,
+        description: l10n.pillarJobsDesc,
+        features: [l10n.pillarJobsFeature1, l10n.pillarJobsFeature2, l10n.pillarJobsFeature3],
+        live: false,
+      ),
+    ];
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -107,6 +97,8 @@ class LandingScreen extends ConsumerStatefulWidget {
 class _LandingScreenState extends ConsumerState<LandingScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final pillars = _buildPillars(l10n);
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -142,7 +134,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Everything your locality needs, in one app',
+                      l10n.pillarsHeadline,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: nikatNavy,
@@ -151,7 +143,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'A growing set of modules built for Indian communities.',
+                      l10n.pillarsSubheadline,
                       style: Theme.of(context)
                           .textTheme
                           .bodyLarge
@@ -173,8 +165,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) => _PillarCard(pillar: _pillars[index]),
-                childCount: _pillars.length,
+                (context, index) => _PillarCard(pillar: pillars[index]),
+                childCount: pillars.length,
               ),
             ),
           ),
@@ -320,7 +312,7 @@ class _PillarCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    pillar.live ? 'Live' : 'Coming soon',
+                    pillar.live ? AppLocalizations.of(context)!.badgeLive : AppLocalizations.of(context)!.badgeComingSoon,
                     style: TextStyle(
                       color: pillar.live ? nikatOrange : Colors.black45,
                       fontSize: 11,

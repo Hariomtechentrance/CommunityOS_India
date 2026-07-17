@@ -37,5 +37,64 @@
   "language": "Language",
   "chooseLanguage": "Choose your language",
   "languageEnglish": "English",
-  "languageHindi": "हिंदी (Hindi)"
+  "languageHindi": "हिंदी (Hindi)",
+
+  "pillarsHeadline": "Everything your locality needs, in one app",
+  "pillarsSubheadline": "A growing set of modules built for Indian communities.",
+  "badgeLive": "Live",
+  "badgeComingSoon": "Coming soon",
+
+  "pillarSocietyTitle": "Society Management",
+  "pillarSocietyDesc": "Notices, complaints, and verified membership approval for your society.",
+  "pillarSocietyFeature1": "Notices & announcements",
+  "pillarSocietyFeature2": "Complaint tracking",
+  "pillarSocietyFeature3": "Member approval workflow",
+
+  "pillarCommunityTitle": "Community",
+  "pillarCommunityDesc": "Posts, questions, recommendations, polls, events, lost & found.",
+  "pillarCommunityFeature1": "Posts & discussions",
+  "pillarCommunityFeature2": "Polls & events",
+  "pillarCommunityFeature3": "Lost & found",
+
+  "pillarMarketplaceTitle": "Hyperlocal Marketplace",
+  "pillarMarketplaceDesc": "Buy, sell, rent, donate and exchange within your locality.",
+  "pillarMarketplaceFeature1": "Buy & sell",
+  "pillarMarketplaceFeature2": "Rent & donate",
+  "pillarMarketplaceFeature3": "Second-hand goods",
+
+  "pillarCommerceTitle": "Local Commerce",
+  "pillarCommerceDesc": "Every local business gets a page - residents book directly.",
+  "pillarCommerceFeature1": "Business directory",
+  "pillarCommerceFeature2": "Direct booking",
+  "pillarCommerceFeature3": "Ratings & reviews",
+
+  "pillarAiTitle": "AI Assistant",
+  "pillarAiDesc": "Ask instead of searching - \"Find me a trusted plumber.\"",
+  "pillarAiFeature1": "Natural-language search",
+  "pillarAiFeature2": "Trusted recommendations",
+  "pillarAiFeature3": "Availability lookup",
+
+  "pillarFestivalTitle": "Festival Module",
+  "pillarFestivalDesc": "Digitize festival donations, volunteering, and schedules.",
+  "pillarFestivalFeature1": "Donation tracking",
+  "pillarFestivalFeature2": "Volunteer sign-up",
+  "pillarFestivalFeature3": "Event schedules",
+
+  "pillarEmergencyTitle": "Emergency SOS",
+  "pillarEmergencyDesc": "One button to alert family, neighbors, and security.",
+  "pillarEmergencyFeature1": "One-tap SOS",
+  "pillarEmergencyFeature2": "Neighbor alerts",
+  "pillarEmergencyFeature3": "Security notification",
+
+  "pillarHelpTitle": "Domestic Help",
+  "pillarHelpDesc": "Find trusted cooks, drivers, maids, and more.",
+  "pillarHelpFeature1": "Verified helpers",
+  "pillarHelpFeature2": "Availability status",
+  "pillarHelpFeature3": "Direct contact",
+
+  "pillarJobsTitle": "Local Jobs",
+  "pillarJobsDesc": "Hire and get hired within your locality.",
+  "pillarJobsFeature1": "Post a need",
+  "pillarJobsFeature2": "Local hiring",
+  "pillarJobsFeature3": "Quick responses"
 }

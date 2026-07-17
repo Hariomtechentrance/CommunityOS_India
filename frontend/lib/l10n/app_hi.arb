@@ -35,5 +35,64 @@
   "language": "भाषा",
   "chooseLanguage": "अपनी भाषा चुनें",
   "languageEnglish": "English (अंग्रेज़ी)",
-  "languageHindi": "हिंदी"
+  "languageHindi": "हिंदी",
+
+  "pillarsHeadline": "आपके इलाके की हर ज़रूरत, एक ही ऐप में",
+  "pillarsSubheadline": "भारतीय समुदायों के लिए बने मॉड्यूल्स की बढ़ती सूची।",
+  "badgeLive": "लाइव",
+  "badgeComingSoon": "जल्द आ रहा है",
+
+  "pillarSocietyTitle": "सोसाइटी प्रबंधन",
+  "pillarSocietyDesc": "आपकी सोसाइटी के लिए नोटिस, शिकायतें, और सत्यापित सदस्यता स्वीकृति।",
+  "pillarSocietyFeature1": "नोटिस और घोषणाएं",
+  "pillarSocietyFeature2": "शिकायत ट्रैकिंग",
+  "pillarSocietyFeature3": "सदस्य स्वीकृति प्रक्रिया",
+
+  "pillarCommunityTitle": "समुदाय",
+  "pillarCommunityDesc": "पोस्ट, सवाल, सिफारिशें, पोल, इवेंट, खोया-पाया।",
+  "pillarCommunityFeature1": "पोस्ट और चर्चाएं",
+  "pillarCommunityFeature2": "पोल और इवेंट",
+  "pillarCommunityFeature3": "खोया-पाया",
+
+  "pillarMarketplaceTitle": "हाइपरलोकल मार्केटप्लेस",
+  "pillarMarketplaceDesc": "अपने इलाके में खरीदें, बेचें, किराए पर दें, दान करें और अदला-बदली करें।",
+  "pillarMarketplaceFeature1": "खरीदें और बेचें",
+  "pillarMarketplaceFeature2": "किराया और दान",
+  "pillarMarketplaceFeature3": "सेकंड-हैंड सामान",
+
+  "pillarCommerceTitle": "स्थानीय व्यापार",
+  "pillarCommerceDesc": "हर स्थानीय व्यवसाय को एक पेज मिलता है - निवासी सीधे बुकिंग कर सकते हैं।",
+  "pillarCommerceFeature1": "व्यवसाय निर्देशिका",
+  "pillarCommerceFeature2": "सीधी बुकिंग",
+  "pillarCommerceFeature3": "रेटिंग और समीक्षाएं",
+
+  "pillarAiTitle": "AI सहायक",
+  "pillarAiDesc": "खोजने के बजाय पूछें - \"मुझे एक भरोसेमंद प्लंबर ढूंढ दो।\"",
+  "pillarAiFeature1": "प्राकृतिक-भाषा खोज",
+  "pillarAiFeature2": "भरोसेमंद सिफारिशें",
+  "pillarAiFeature3": "उपलब्धता जानकारी",
+
+  "pillarFestivalTitle": "त्योहार मॉड्यूल",
+  "pillarFestivalDesc": "त्योहार के चंदे, स्वयंसेवा, और कार्यक्रमों को डिजिटल बनाएं।",
+  "pillarFestivalFeature1": "चंदा ट्रैकिंग",
+  "pillarFestivalFeature2": "स्वयंसेवक पंजीकरण",
+  "pillarFestivalFeature3": "कार्यक्रम शेड्यूल",
+
+  "pillarEmergencyTitle": "आपातकालीन SOS",
+  "pillarEmergencyDesc": "परिवार, पड़ोसियों और सुरक्षा को सचेत करने के लिए एक बटन।",
+  "pillarEmergencyFeature1": "एक-टैप SOS",
+  "pillarEmergencyFeature2": "पड़ोसी अलर्ट",
+  "pillarEmergencyFeature3": "सुरक्षा सूचना",
+
+  "pillarHelpTitle": "घरेलू सहायता",
+  "pillarHelpDesc": "भरोसेमंद रसोइया, ड्राइवर, नौकरानी और अन्य ढूंढें।",
+  "pillarHelpFeature1": "सत्यापित सहायक",
+  "pillarHelpFeature2": "उपलब्धता स्थिति",
+  "pillarHelpFeature3": "सीधा संपर्क",
+
+  "pillarJobsTitle": "स्थानीय नौकरियां",
+  "pillarJobsDesc": "अपने इलाके में नौकरी दें और पाएं।",
+  "pillarJobsFeature1": "ज़रूरत पोस्ट करें",
+  "pillarJobsFeature2": "स्थानीय भर्ती",
+  "pillarJobsFeature3": "त्वरित प्रतिक्रिया"
 }
