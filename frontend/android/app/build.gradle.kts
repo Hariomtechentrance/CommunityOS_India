@@ -44,3 +44,13 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // The firebase_messaging Flutter plugin keeps its own Firebase Messaging
+    // dependency at `implementation` scope, so it isn't visible to our own
+    // Kotlin code (CallFirebaseMessagingService extends the plugin's service
+    // class, which needs FirebaseMessagingService/RemoteMessage directly).
+    // The BoM keeps this version aligned with whatever the plugin resolves.
+    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
+    implementation("com.google.firebase:firebase-messaging")
+}

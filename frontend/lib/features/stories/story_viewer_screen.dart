@@ -31,7 +31,7 @@ class StoryViewerScreen extends ConsumerStatefulWidget {
 }
 
 class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late int _index;
   late AnimationController _controller;
   VideoPlayerController? _videoController;
@@ -40,12 +40,30 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _index = widget.initialIndex;
     _controller = AnimationController(vsync: this)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _advance();
       });
     _showCurrent();
+  }
+
+  /// Without this, backgrounding the app mid-story leaves its video/voice-note
+  /// audio playing invisibly, and the progress timer keeps ticking - so the
+  /// story silently auto-advances (possibly through several more) while
+  /// nobody's watching.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _videoController?.play();
+      _audioPlayer?.resume();
+      if (!_controller.isAnimating) _controller.forward();
+    } else {
+      _videoController?.pause();
+      _audioPlayer?.pause();
+      _controller.stop();
+    }
   }
 
   Story get _current => widget.stories[_index];
@@ -94,6 +112,7 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _videoController?.dispose();
     _audioPlayer?.dispose();

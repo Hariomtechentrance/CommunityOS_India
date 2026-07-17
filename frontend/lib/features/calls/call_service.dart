@@ -6,6 +6,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../../core/api_client.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/turn_credentials.dart';
+import 'native_call_bridge.dart';
 
 enum CallStatus { idle, calling, ringing, connecting, connected }
 
@@ -27,6 +28,13 @@ class CallService {
   MediaStream? _localStream;
   String? _peerProfileId;
   String? _peerName;
+  /// Set only when this call arrived through the native incoming-call screen
+  /// (the FCM wake-up path, for a closed/backgrounded app) rather than the
+  /// normal in-app socket path - lets us tell Telecom when the call becomes
+  /// active/ends. Decline from that screen is handled entirely natively
+  /// (see IncomingCallActivity.kt) - by the time this app is running again,
+  /// there's nothing left for it to do for that case.
+  String? _activeCallId;
 
   final remoteRenderer = RTCVideoRenderer();
   final ValueNotifier<CallStatus> status = ValueNotifier(CallStatus.idle);
@@ -44,9 +52,38 @@ class CallService {
     );
     _registerListeners();
     _socket.connect();
+    NativeCallBridge.registerPhoneAccount();
+    _checkPendingAnswerCall();
+  }
+
+  /// The app may have just been launched specifically to answer a call (the
+  /// user tapped Accept on the native incoming-call screen) - if so, resume
+  /// exactly where that left off: we don't know who's calling yet, only the
+  /// callId from the push payload, so the server resolves the rest via
+  /// `call:invite-info` once we accept.
+  Future<void> _checkPendingAnswerCall() async {
+    final pending = await NativeCallBridge.getPendingAnswerCall();
+    final callId = pending?['callId'];
+    if (callId == null) return;
+    _activeCallId = callId;
+    status.value = CallStatus.connecting;
+    _socket.emit('call:accept', {'callId': callId});
   }
 
   void _registerListeners() {
+    _socket.on('call:invite-info', (data) {
+      _peerProfileId = data['fromProfileId'] as String?;
+      _peerName = data['fromName'] as String?;
+    });
+
+    _socket.on('call:ringing', (_) {});
+
+    _socket.on('call:no-answer', (_) {
+      status.value = CallStatus.idle;
+      _peerProfileId = null;
+      error.value = "They didn't answer.";
+    });
+
     _socket.on('call:incoming', (data) {
       _peerProfileId = data['fromProfileId'] as String;
       _peerName = data['fromName'] as String?;
@@ -77,6 +114,7 @@ class CallService {
       await _pc!.setLocalDescription(answer);
       _socket.emit('call:answer', {'toProfileId': _peerProfileId, 'answer': answer.toMap()});
       status.value = CallStatus.connected;
+      if (_activeCallId != null) NativeCallBridge.setCallActive();
     });
 
     _socket.on('call:answer', (data) async {
@@ -167,6 +205,7 @@ class CallService {
 
   void reject() {
     _socket.emit('call:reject', {'toProfileId': _peerProfileId});
+    if (_activeCallId != null) NativeCallBridge.endCall(_activeCallId!);
     incoming.value = null;
     status.value = CallStatus.idle;
     _peerProfileId = null;
@@ -176,6 +215,7 @@ class CallService {
     if (_peerProfileId != null) {
       _socket.emit('call:hangup', {'toProfileId': _peerProfileId});
     }
+    if (_activeCallId != null) NativeCallBridge.endCall(_activeCallId!);
     _cleanup();
   }
 
@@ -191,6 +231,7 @@ class CallService {
     incoming.value = null;
     _peerProfileId = null;
     _peerName = null;
+    _activeCallId = null;
   }
 
   void dispose() {

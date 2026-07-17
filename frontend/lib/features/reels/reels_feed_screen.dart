@@ -169,14 +169,29 @@ class _ReelPage extends ConsumerStatefulWidget {
   ConsumerState<_ReelPage> createState() => _ReelPageState();
 }
 
-class _ReelPageState extends ConsumerState<_ReelPage> {
+class _ReelPageState extends ConsumerState<_ReelPage> with WidgetsBindingObserver {
   VideoPlayerController? _controller;
   bool _liking = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initVideo();
+  }
+
+  /// Without this, backgrounding the app (or switching to another app) while
+  /// a reel is playing leaves its video - and audio, once unmuted - running
+  /// invisibly, since only page-swipe changes `isActive`, not app lifecycle.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _controller;
+    if (controller == null) return;
+    if (state == AppLifecycleState.resumed) {
+      if (widget.isActive) controller.play();
+    } else {
+      controller.pause();
+    }
   }
 
   Future<void> _initVideo() async {
@@ -208,6 +223,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
   }

@@ -480,12 +480,13 @@ class _VideoAttachment extends StatefulWidget {
   State<_VideoAttachment> createState() => _VideoAttachmentState();
 }
 
-class _VideoAttachmentState extends State<_VideoAttachment> {
+class _VideoAttachmentState extends State<_VideoAttachment> with WidgetsBindingObserver {
   late final VideoPlayerController _controller;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
         if (!mounted) return;
@@ -493,6 +494,14 @@ class _VideoAttachmentState extends State<_VideoAttachment> {
         _controller.seekTo(Duration(milliseconds: ((widget.trimStart ?? 0) * 1000).round()));
       });
     _controller.addListener(_clampToTrim);
+  }
+
+  /// Backgrounding the app mid-playback would otherwise leave this running
+  /// invisibly - pause it, and don't auto-resume until the user taps play
+  /// again (matches a fresh open, not silently blaring on return).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _controller.pause();
   }
 
   void _clampToTrim() {
@@ -506,6 +515,7 @@ class _VideoAttachmentState extends State<_VideoAttachment> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_clampToTrim);
     _controller.dispose();
     super.dispose();
@@ -550,21 +560,30 @@ class _AudioAttachment extends StatefulWidget {
   State<_AudioAttachment> createState() => _AudioAttachmentState();
 }
 
-class _AudioAttachmentState extends State<_AudioAttachment> {
+class _AudioAttachmentState extends State<_AudioAttachment> with WidgetsBindingObserver {
   final _player = ap.AudioPlayer();
   bool _playing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _player.onPlayerStateChanged.listen((state) {
       if (!mounted) return;
       setState(() => _playing = state == ap.PlayerState.playing);
     });
   }
 
+  /// Backgrounding the app mid-playback would otherwise leave this voice
+  /// note playing invisibly.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _player.pause();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _player.dispose();
     super.dispose();
   }

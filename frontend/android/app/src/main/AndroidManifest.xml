@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -8,6 +9,16 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Self-managed Telecom ConnectionService (hand-rolled, not a system
+         dialer) - lets an incoming call ring with a real system call screen
+         even from a fully closed app. MANAGE_OWN_CALLS is the modern,
+         normal-level permission for exactly this (no runtime prompt needed,
+         unlike the legacy READ_PHONE_STATE/CALL_PHONE dangerous permissions
+         used by pre-Android-9 telephony integrations). -->
+    <uses-permission android:name="android.permission.BIND_TELECOM_CONNECTION_SERVICE"/>
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <application
         android:label="NIKAT"
@@ -43,6 +54,39 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <service android:name=".CallConnectionService"
+            android:label="NIKAT"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService"/>
+            </intent-filter>
+        </service>
+
+        <!-- Shown full-screen over the lock screen when a call push arrives
+             and the app isn't already in the foreground. -->
+        <activity android:name=".IncomingCallActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/LaunchTheme"/>
+
+        <!-- Replaces the firebase_messaging plugin's default FCM service with
+             our subclass (CallFirebaseMessagingService), which intercepts
+             incoming-call pushes natively before handing everything else off
+             to the normal Flutter/Dart handling via super(). Only one service
+             can own the MESSAGING_EVENT intent-filter per app. -->
+        <service android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"
+            tools:node="remove"/>
+        <service android:name=".CallFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
