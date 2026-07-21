@@ -28,15 +28,6 @@ class _EmergencyAlertOverlayState extends ConsumerState<EmergencyAlertOverlay> {
   EmergencyAlertData? _active;
   Timer? _autoDismiss;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _service = ref.read(emergencyServiceProvider);
-      _service?.incoming.addListener(_onIncoming);
-    });
-  }
-
   void _onIncoming() {
     final alert = _service?.incoming.value;
     if (alert == null) return;
@@ -63,6 +54,26 @@ class _EmergencyAlertOverlayState extends ConsumerState<EmergencyAlertOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    // Reactive on purpose - session loads asynchronously, so a one-time
+    // read at first frame (the old approach) would always see a null user
+    // and never re-check, silently skipping push-token registration for
+    // every login on every session.
+    ref.listen<EmergencyService?>(emergencyServiceProvider, (previous, next) {
+      previous?.incoming.removeListener(_onIncoming);
+      _service = next;
+      next?.incoming.addListener(_onIncoming);
+    });
+    // ref.listen only fires on future changes, not the value already
+    // current at this first build - covers the case where a session was
+    // already restored (e.g. app relaunch) before this widget ever built.
+    if (_service == null) {
+      final current = ref.read(emergencyServiceProvider);
+      if (current != null) {
+        _service = current;
+        current.incoming.addListener(_onIncoming);
+      }
+    }
+
     final alert = _active;
     return Stack(
       children: [

@@ -47,9 +47,16 @@ class EmergencyService {
       final settings = await FirebaseMessaging.instance.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
       final token = await FirebaseMessaging.instance.getToken(vapidKey: vapidKey);
-      if (token != null) await userRepository.updateFcmToken(token);
-    } catch (_) {
-      // Push is a best-effort secondary channel - never block the app on it.
+      if (token != null) {
+        await userRepository.updateFcmToken(token);
+      } else {
+        debugPrint('[push] getToken() returned null - permission granted but no token issued');
+      }
+    } catch (e) {
+      // Push is a best-effort secondary channel - never block the app on it,
+      // but still log it: a silently empty catch here is what let this whole
+      // path stay broken undetected for a long time previously.
+      debugPrint('[push] registerPushToken failed: $e');
     }
   }
 
