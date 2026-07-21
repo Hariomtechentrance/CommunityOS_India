@@ -33,5 +33,21 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
+
+  // Render's free tier spins the service down after 15 minutes of no
+  // inbound HTTP traffic, causing a ~30s cold start for the next visitor.
+  // Pinging ourselves from inside the running process every 14 minutes
+  // keeps traffic flowing so it never goes idle long enough to sleep.
+  // RENDER_EXTERNAL_URL is auto-injected by Render only in deployed
+  // environments, so this is a no-op locally. More reliable than an
+  // external scheduler (e.g. GitHub Actions cron), which can be silently
+  // throttled to roughly hourly under load instead of the configured
+  // interval.
+  const selfUrl = process.env.RENDER_EXTERNAL_URL;
+  if (selfUrl) {
+    setInterval(() => {
+      fetch(selfUrl).catch(() => {});
+    }, 14 * 60 * 1000);
+  }
 }
 bootstrap();
