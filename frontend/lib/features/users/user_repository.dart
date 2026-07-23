@@ -62,6 +62,13 @@ class UserRepository {
     await _client.dio.patch('/users/me/fcm-token', data: {'token': token});
   }
 
+  /// Travel feed signal - records that this device is physically at (lat,
+  /// lng) right now, separate from and never touching the home address set
+  /// via [updateLocation]. Meant to be sent once per app foreground.
+  Future<void> recordLocationVisit({required double lat, required double lng}) async {
+    await _client.dio.post('/users/me/location-visit', data: {'lat': lat, 'lng': lng});
+  }
+
   Future<AppUser> updateAvatar(String avatarUrl) async {
     final res = await _client.dio.patch('/users/me/avatar', data: {'avatarUrl': avatarUrl});
     return AppUser.fromJson(res.data as Map<String, dynamic>);

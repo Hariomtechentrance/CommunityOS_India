@@ -13,6 +13,20 @@ const EMERGENCY_NEARBY_KM = 0.1;
 /** Matches the create-post radius slider's max (see CreateAreaPostScreen) -
  * the widest an author can ever set radiusKm to. */
 const MAX_NEARBY_RADIUS_KM = 25;
+/** Travel feed: a visited pincode keeps counting as "reachable" for this
+ * long after the last time the user's device reported being there, then
+ * quietly ages out of every clause below - see LocationVisit in schema.prisma. */
+const LOCATION_VISIT_WINDOW_DAYS = 8;
+
+interface ViewerLocation {
+  pincode: string | null | undefined;
+  latitude: number | null | undefined;
+  longitude: number | null | undefined;
+  /** Home pincode plus every still-fresh LocationVisit pincode, deduped. */
+  pincodes: string[];
+  /** Home coordinates plus every still-fresh LocationVisit's coordinates. */
+  points: { latitude: number; longitude: number }[];
+}
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -97,7 +111,7 @@ export class AreaService {
       radiusKm: number | null;
     },
     viewerUserId: string | undefined,
-    viewer: { pincode: string | null | undefined; latitude: number | null | undefined; longitude: number | null | undefined },
+    viewer: ViewerLocation,
   ): boolean {
     if (viewerUserId && post.userId === viewerUserId) return true;
     if (post.visibility === AreaPostVisibility.ALL_INDIA) return true;
@@ -106,25 +120,41 @@ export class AreaService {
       post.radiusKm != null &&
       post.latitude != null &&
       post.longitude != null &&
-      viewer.latitude != null &&
-      viewer.longitude != null
+      viewer.points.some((p) => haversineKm(post.latitude!, post.longitude!, p.latitude, p.longitude) <= post.radiusKm!)
     ) {
-      const distance = haversineKm(post.latitude, post.longitude, viewer.latitude, viewer.longitude);
-      if (distance > post.radiusKm) return false;
+      return true;
     }
+    if (post.radiusKm != null) return false;
 
     if (post.visibility !== AreaPostVisibility.PINCODE_ONLY) return true;
-    return !!post.pincode && !!viewer.pincode && post.pincode === viewer.pincode;
+    return !!post.pincode && viewer.pincodes.includes(post.pincode);
   }
 
-  private async viewerLocationOf(userId?: string): Promise<{
-    pincode: string | null | undefined;
-    latitude: number | null | undefined;
-    longitude: number | null | undefined;
-  }> {
-    if (!userId) return { pincode: undefined, latitude: undefined, longitude: undefined };
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    return { pincode: user?.pincode, latitude: user?.latitude, longitude: user?.longitude };
+  /** Every pincode/lat-lng this viewer counts as "reachable" from right now -
+   * their permanent home location plus any still-fresh LocationVisit rows
+   * (see LOCATION_VISIT_WINDOW_DAYS), so a travelling user's feed blends
+   * home and current-city posts without ever touching their home profile. */
+  private async viewerLocationOf(userId?: string): Promise<ViewerLocation> {
+    if (!userId) return { pincode: undefined, latitude: undefined, longitude: undefined, pincodes: [], points: [] };
+    const [user, visits] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.prisma.locationVisit.findMany({
+        where: {
+          userId,
+          lastSeenAt: { gte: new Date(Date.now() - LOCATION_VISIT_WINDOW_DAYS * 24 * 60 * 60 * 1000) },
+        },
+      }),
+    ]);
+
+    const pincodes = [...new Set([user?.pincode, ...visits.map((v) => v.pincode)].filter((p): p is string => !!p))];
+    const points = [
+      ...(user?.latitude != null && user?.longitude != null ? [{ latitude: user.latitude, longitude: user.longitude }] : []),
+      ...visits
+        .filter((v) => v.latitude != null && v.longitude != null)
+        .map((v) => ({ latitude: v.latitude!, longitude: v.longitude! })),
+    ];
+
+    return { pincode: user?.pincode, latitude: user?.latitude, longitude: user?.longitude, pincodes, points };
   }
 
   /** Batched (not N+1) - one query for every post this viewer has saved. */
@@ -181,32 +211,29 @@ export class AreaService {
    * possible radius (MAX_NEARBY_RADIUS_KM); `isVisibleTo` below then applies
    * each post's own exact radiusKm/haversine cutoff.
    */
-  private reachClauses(viewer: {
-    pincode: string | null | undefined;
-    latitude: number | null | undefined;
-    longitude: number | null | undefined;
-  }) {
+  private reachClauses(viewer: ViewerLocation) {
     const clauses: Record<string, unknown>[] = [];
-    if (viewer.pincode) {
-      clauses.push({ pincode: viewer.pincode });
+    if (viewer.pincodes.length > 0) {
+      clauses.push({ pincode: { in: viewer.pincodes } });
     }
-    if (viewer.latitude != null && viewer.longitude != null) {
+    // One pair of legs per reachable point (home + every fresh travel-feed
+    // location) - a travelling user must catch emergency/nearby posts around
+    // wherever they are now just as much as around home.
+    for (const point of viewer.points) {
       const emergLatDelta = EMERGENCY_NEARBY_KM / 111;
-      const emergLngDelta =
-        EMERGENCY_NEARBY_KM / (111 * Math.cos((viewer.latitude * Math.PI) / 180) || 1);
+      const emergLngDelta = EMERGENCY_NEARBY_KM / (111 * Math.cos((point.latitude * Math.PI) / 180) || 1);
       clauses.push({
         kind: AreaPostKind.EMERGENCY_SOS,
-        latitude: { gte: viewer.latitude - emergLatDelta, lte: viewer.latitude + emergLatDelta },
-        longitude: { gte: viewer.longitude - emergLngDelta, lte: viewer.longitude + emergLngDelta },
+        latitude: { gte: point.latitude - emergLatDelta, lte: point.latitude + emergLatDelta },
+        longitude: { gte: point.longitude - emergLngDelta, lte: point.longitude + emergLngDelta },
       });
 
       const maxLatDelta = MAX_NEARBY_RADIUS_KM / 111;
-      const maxLngDelta =
-        MAX_NEARBY_RADIUS_KM / (111 * Math.cos((viewer.latitude * Math.PI) / 180) || 1);
+      const maxLngDelta = MAX_NEARBY_RADIUS_KM / (111 * Math.cos((point.latitude * Math.PI) / 180) || 1);
       clauses.push({
         radiusKm: { not: null },
-        latitude: { gte: viewer.latitude - maxLatDelta, lte: viewer.latitude + maxLatDelta },
-        longitude: { gte: viewer.longitude - maxLngDelta, lte: viewer.longitude + maxLngDelta },
+        latitude: { gte: point.latitude - maxLatDelta, lte: point.latitude + maxLatDelta },
+        longitude: { gte: point.longitude - maxLngDelta, lte: point.longitude + maxLngDelta },
       });
     }
     return clauses;

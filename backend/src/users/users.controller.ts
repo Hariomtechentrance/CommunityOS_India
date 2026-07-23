@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DetectAreaDto } from './dto/detect-area.dto';
 import { sanitizeUser } from './sanitize-user';
+import { RecordLocationVisitDto } from './dto/record-location-visit.dto';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
@@ -33,6 +34,16 @@ export class UsersController {
   @Post('detect-area')
   detectArea(@Body() dto: DetectAreaDto) {
     return this.users.detectArea(dto.lat, dto.lng);
+  }
+
+  /** Best-effort travel-feed signal, sent once per app foreground - never
+   * touches the user's home address fields (see updateLocation above). */
+  @Post('location-visit')
+  recordLocationVisit(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: RecordLocationVisitDto,
+  ) {
+    return this.users.recordLocationVisit(user.userId, dto.lat, dto.lng);
   }
 
   @Get('neighbours')

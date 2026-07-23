@@ -118,8 +118,33 @@ model User {
   reelLikes         ReelLike[]
   reelComments      ReelComment[]
   campaigns         Campaign[]
+  locationVisits    LocationVisit[]
 
   @@index([area])
+}
+
+// Travel feed: every distinct pincode a user's device has reported being
+// physically at (via PATCH /users/me/location-visit, sent on app foreground -
+// separate from the one-time home address in PATCH /users/me/location, which
+// this never touches). AreaService folds every row still within the 8-day
+// window into feed reach, so a travelling user keeps seeing their home
+// locality's posts alongside wherever they are now; once 8 days pass with no
+// fresh visit, that pincode's row ages out of the query and its posts quietly
+// stop showing, with no separate cleanup job required.
+model LocationVisit {
+  id         String   @id @default(cuid())
+  userId     String
+  pincode    String
+  area       String?
+  city       String?
+  latitude   Float?
+  longitude  Float?
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pincode])
+  @@index([userId, lastSeenAt])
 }
 
 // --- Follow graph: directed, no approval needed (unlike society Membership).

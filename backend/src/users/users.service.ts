@@ -132,6 +132,23 @@ export class UsersService {
     return { area };
   }
 
+  /** Records that this user's device was physically at (lat, lng) right now,
+   * for the travel feed (see LocationVisit in schema.prisma) - upserts on
+   * (userId, pincode) so revisiting the same city just refreshes lastSeenAt
+   * rather than piling up duplicate rows. Silently no-ops if reverse
+   * geocoding can't resolve a pincode, same best-effort spirit as push
+   * registration - this must never fail the caller's app-open flow. */
+  async recordLocationVisit(userId: string, lat: number, lng: number) {
+    const { pincode, area, city } = await this.geocoding.reverseGeocodeDetailed(lat, lng);
+    if (!pincode) return null;
+
+    return this.prisma.locationVisit.upsert({
+      where: { userId_pincode: { userId, pincode } },
+      update: { lastSeenAt: new Date(), area, city, latitude: lat, longitude: lng },
+      create: { userId, pincode, area, city, latitude: lat, longitude: lng },
+    });
+  }
+
   listNeighbours(area: string, excludeUserId?: string) {
     return this.prisma.user.findMany({
       where: {
