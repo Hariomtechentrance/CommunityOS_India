@@ -24,7 +24,10 @@ class PhoneVerificationPending {
 }
 
 Future<void> completeFirebaseSignIn(WidgetRef ref, User firebaseUser) async {
-  final idToken = await firebaseUser.getIdToken();
+  // Force a fresh token: right after linking a new credential (e.g. phone
+  // linked onto a Google account), a cached token can still predate the
+  // link and miss the phone_number claim the backend requires.
+  final idToken = await firebaseUser.getIdToken(true);
   final result = await ref.read(authRepositoryProvider).verifyFirebaseToken(idToken!);
   await ref.read(sessionControllerProvider.notifier).loginWith(result.accessToken, result.user);
 }

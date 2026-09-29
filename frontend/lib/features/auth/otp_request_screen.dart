@@ -10,10 +10,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/api_client.dart';
 import '../../core/google_signin_button.dart' as gsi_button;
 import '../../core/google_signin_config.dart';
-import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
 import '../../l10n/generated/app_localizations.dart';
-import 'auth_repository.dart';
 import 'phone_verification.dart';
 
 class OtpRequestScreen extends ConsumerStatefulWidget {
@@ -39,13 +37,21 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) _initGoogleSignIn();
+    _initGoogleSignIn();
   }
 
   Future<void> _initGoogleSignIn() async {
     try {
       final signIn = GoogleSignIn.instance;
-      await signIn.initialize(clientId: googleSignInWebClientId);
+      // Web's Google Identity Services widget needs its own OAuth client id.
+      // Android/iOS instead need the same web client passed as
+      // serverClientId, so the native sign-in still returns a Firebase-
+      // compatible ID token rather than one scoped to a mobile client.
+      if (kIsWeb) {
+        await signIn.initialize(clientId: googleSignInWebClientId);
+      } else {
+        await signIn.initialize(serverClientId: googleSignInWebClientId);
+      }
       _googleSub = signIn.authenticationEvents.listen(
         _handleGoogleAuthEvent,
         onError: (Object e) => setState(() => _error = e.toString()),
@@ -53,6 +59,17 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
       if (mounted) setState(() => _googleReady = true);
     } catch (e) {
       if (mounted) setState(() => _error = 'Google sign-in unavailable: $e');
+    }
+  }
+
+  Future<void> _handleGoogleButtonTap() async {
+    try {
+      await GoogleSignIn.instance.authenticate();
+      // Success/failure both flow through the authenticationEvents
+      // subscription set up in _initGoogleSignIn.
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      if (mounted) setState(() => _error = e.description ?? 'Google sign-in failed');
     }
   }
 
@@ -70,12 +87,7 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
 
       if (firebaseUser.phoneNumber != null) {
         // Returning user who already linked a phone number previously.
-        final idToken = await firebaseUser.getIdToken();
-        final result = await ref.read(authRepositoryProvider).verifyFirebaseToken(idToken!);
-        await ref.read(sessionControllerProvider.notifier).loginWith(
-              result.accessToken,
-              result.user,
-            );
+        await completeFirebaseSignIn(ref, firebaseUser);
       } else {
         // New Google sign-in - one more step to link a phone number.
         setState(() => _googlePending = true);
@@ -197,8 +209,15 @@ class _OtpRequestScreenState extends ConsumerState<OtpRequestScreen> {
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
-                if (!_googlePending && kIsWeb && _googleReady) ...[
-                  Center(child: gsi_button.renderButton()),
+                if (!_googlePending && _googleReady) ...[
+                  if (kIsWeb)
+                    Center(child: gsi_button.renderButton())
+                  else
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _handleGoogleButtonTap,
+                      icon: const Icon(Icons.g_mobiledata, size: 28),
+                      label: const Text('Continue with Google'),
+                    ),
                   const SizedBox(height: 16),
                   const Row(
                     children: [
