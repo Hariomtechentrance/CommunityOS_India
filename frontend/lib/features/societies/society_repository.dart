@@ -7,12 +7,13 @@ class SocietyRepository {
 
   SocietyRepository(this._client);
 
-  Future<List<Society>> search({String? query, String? pincode}) async {
+  Future<List<Society>> search({String? query, String? pincode, SocietyType? type}) async {
     final res = await _client.dio.get(
       '/societies',
       queryParameters: {
         if (query != null && query.isNotEmpty) 'q': query,
         if (pincode != null && pincode.isNotEmpty) 'pincode': pincode,
+        if (type != null) 'type': societyTypeToJson(type),
       },
     );
     return (res.data as List)
@@ -31,6 +32,8 @@ class SocietyRepository {
     required String city,
     required String state,
     required String pincode,
+    SocietyType type = SocietyType.apartment,
+    String? emailDomain,
   }) async {
     final res = await _client.dio.post(
       '/societies',
@@ -40,6 +43,8 @@ class SocietyRepository {
         'city': city,
         'state': state,
         'pincode': pincode,
+        'type': societyTypeToJson(type),
+        if (emailDomain != null && emailDomain.isNotEmpty) 'emailDomain': emailDomain,
       },
     );
     return Society.fromJson(res.data as Map<String, dynamic>);

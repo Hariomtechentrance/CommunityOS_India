@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../models/reel.dart';
+import '../../models/user.dart';
 
 class ReelPage {
   final List<Reel> items;
@@ -32,10 +33,18 @@ class ReelsRepository {
     return ReelPage.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<Reel> create({required String videoUrl, String? caption}) async {
+  Future<Reel> create({
+    required String videoUrl,
+    String? caption,
+    String? linkedAreaPostId,
+  }) async {
     final res = await _client.dio.post(
       '/reels',
-      data: {'videoUrl': videoUrl, if (caption != null && caption.isNotEmpty) 'caption': caption},
+      data: {
+        'videoUrl': videoUrl,
+        if (caption != null && caption.isNotEmpty) 'caption': caption,
+        if (linkedAreaPostId != null) 'linkedAreaPostId': linkedAreaPostId,
+      },
     );
     return Reel.fromJson(res.data as Map<String, dynamic>);
   }
@@ -43,6 +52,11 @@ class ReelsRepository {
   Future<bool> toggleLike(String reelId) async {
     final res = await _client.dio.post('/reels/$reelId/like');
     return res.data['liked'] as bool;
+  }
+
+  Future<List<AppUser>> listLikers(String reelId) async {
+    final res = await _client.dio.get('/reels/$reelId/likes');
+    return (res.data as List).map((e) => AppUser.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<ReelComment>> listComments(String reelId) async {

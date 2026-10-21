@@ -1,5 +1,21 @@
 import 'user.dart';
 
+class LinkedShopPost {
+  final String id;
+  final String title;
+  final List<String> imageUrls;
+  final String? offerText;
+
+  LinkedShopPost({required this.id, required this.title, required this.imageUrls, this.offerText});
+
+  factory LinkedShopPost.fromJson(Map<String, dynamic> json) => LinkedShopPost(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        imageUrls: (json['imageUrls'] as List?)?.cast<String>() ?? const [],
+        offerText: json['offerText'] as String?,
+      );
+}
+
 class Reel {
   final String id;
   final String videoUrl;
@@ -9,6 +25,7 @@ class Reel {
   final int likeCount;
   final int commentCount;
   final bool myLiked;
+  final LinkedShopPost? linkedPost;
 
   Reel({
     required this.id,
@@ -19,6 +36,7 @@ class Reel {
     this.likeCount = 0,
     this.commentCount = 0,
     this.myLiked = false,
+    this.linkedPost,
   });
 
   factory Reel.fromJson(Map<String, dynamic> json) => Reel(
@@ -36,6 +54,9 @@ class Reel {
             ? (json['_count'] as Map<String, dynamic>)['comments'] as int? ?? 0
             : 0,
         myLiked: json['myLiked'] as bool? ?? false,
+        linkedPost: json['linkedPost'] != null
+            ? LinkedShopPost.fromJson(json['linkedPost'] as Map<String, dynamic>)
+            : null,
       );
 }
 

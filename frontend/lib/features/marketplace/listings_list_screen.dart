@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -123,10 +124,10 @@ class _ListingsListScreenState extends ConsumerState<ListingsListScreen> {
                                         AspectRatio(
                                           aspectRatio: 1.4,
                                           child: listing.imageUrls.isNotEmpty
-                                              ? Image.network(
-                                                  listing.imageUrls.first,
+                                              ? CachedNetworkImage(
+                                                  imageUrl: listing.imageUrls.first,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (_, _, _) => const ColoredBox(
+                                                  errorWidget: (_, _, _) => const ColoredBox(
                                                     color: Color(0xFFEEEEEE),
                                                     child: Icon(Icons.image_not_supported),
                                                   ),

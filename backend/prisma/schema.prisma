@@ -18,6 +18,11 @@ enum MembershipRole {
   RESIDENT
 }
 
+enum MessagePrivacy {
+  EVERYONE
+  NO_ONE
+}
+
 enum MembershipStatus {
   PENDING
   APPROVED
@@ -83,6 +88,35 @@ model User {
   // Single most-recent token per user - fine at this stage, multi-device is later.
   fcmToken String?
 
+  // Gates only the "someone in your network did something" activity pushes
+  // (follows.service.ts notifyFollowers) - calls and emergency SOS alerts
+  // bypass this entirely, since muting those would defeat their purpose.
+  activityNotificationsEnabled Boolean @default(true)
+  // When on, other viewers see "liked by a few people" instead of an exact
+  // count on this user's own posts - the count itself is never hidden from
+  // the author, only from everyone else. Mirrors Instagram's "hide like
+  // counts" setting.
+  hideLikeCounts Boolean @default(false)
+
+  // Professional profile - "look at what I can do" alongside the regular
+  // social profile. All optional, all opt-in; empty for everyone by default.
+  headline     String?
+  skills       String[] @default([])
+  availableFor String[] @default([])
+
+  // Niikat Connect - interest-based intro to a stranger, opt-in only
+  // (connectEnabled defaults off). Separate from `skills` (what you can
+  // do professionally) - these are casual topics for a conversation
+  // match. Block/Report apply exactly as they do everywhere else; this
+  // never bypasses them.
+  interests      String[] @default([])
+  connectEnabled Boolean  @default(false)
+
+  // Who can start a new DM thread with this user - blocking always applies
+  // on top of this regardless of the setting. Kept as an enum (not a plain
+  // bool) so a future FOLLOWERS_ONLY option doesn't need a migration.
+  allowMessagesFrom MessagePrivacy @default(EVERYONE)
+
   // Platform-wide admin (see backend/src/admin) - independent of any
   // per-society Membership role. Manually granted, not self-service.
   // Super admins log in with email+password (POST /admin/login) instead of
@@ -107,8 +141,23 @@ model User {
   areaPostInterests AreaPostInterest[]
   areaPostSaves     AreaPostSave[]
   areaPostComments  AreaPostComment[]
+  areaPostReactions AreaPostReaction[]
   following         Follow[] @relation("Follower")
   followers         Follow[] @relation("Following")
+  blocking          Block[] @relation("Blocker")
+  blockedBy         Block[] @relation("Blocked")
+  muting            Mute[] @relation("Muter")
+  mutedBy           Mute[] @relation("Muted")
+  reportsMade       Report[] @relation("Reporter")
+  reportsReceived   Report[] @relation("ReportedUser")
+  goalCommunitiesCreated GoalCommunity[]
+  goalCommunityMemberships GoalCommunityMember[]
+  wallet Wallet?
+  payoutRequests PayoutRequest[]
+  projects Project[]
+  feedback Feedback[]
+  jobPostings     JobPosting[]
+  jobApplications JobApplication[]
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageReceiver")
   stories           Story[]
@@ -162,14 +211,96 @@ model Follow {
   @@index([followingId])
 }
 
+model Block {
+  id            String   @id @default(cuid())
+  blockerId     String
+  blockedId     String
+  createdAt     DateTime @default(now())
+
+  blocker  User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked  User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+// Softer than Block - hides the muted user's posts from the muter's feed
+// without severing follow/messaging and without the muted user ever being
+// told, unlike Block which is mutual and visible via its own confirmation.
+model Mute {
+  id       String   @id @default(cuid())
+  muterId  String
+  mutedId  String
+  createdAt DateTime @default(now())
+
+  muter User @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@unique([muterId, mutedId])
+  @@index([mutedId])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  FAKE_ACCOUNT
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+// Covers both "report this user" and "report this post" - exactly one of
+// reportedUserId/reportedPostId is set per row, never both. Write-only from
+// the reporter's side; review happens through the admin dashboard.
+model Report {
+  id             String        @id @default(cuid())
+  reporterId     String
+  reportedUserId String?
+  reportedPostId String?
+  reason         ReportReason
+  details        String?
+  status         ReportStatus  @default(OPEN)
+  createdAt      DateTime      @default(now())
+
+  reporter     User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reportedPost AreaPost? @relation(fields: [reportedPostId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([reportedUserId])
+  @@index([reportedPostId])
+}
+
+enum SocietyType {
+  APARTMENT
+  COLLEGE
+  // Open-topic local community (e.g. "Bangalore Food Community"), not tied
+  // to one residential address - members join by interest, not proximity,
+  // same Membership approval flow as the other two types.
+  BUSINESS
+}
+
 model Society {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   addressLine String
   city        String
   state       String
   pincode     String
-  createdAt   DateTime @default(now())
+  type        SocietyType @default(APARTMENT)
+  // COLLEGE-type only: the institution's email domain (e.g.
+  // "sandipuniversity.edu.in"), shown to joiners as what their claimed
+  // college email should end with. This is a format hint, not verified
+  // proof of ownership - no email-OTP service is wired up yet (see
+  // Membership.collegeEmail), so it's one more signal for the approving
+  // admin, not a trust guarantee on its own.
+  emailDomain String?
+  createdAt   DateTime    @default(now())
 
   units       Unit[]
   memberships Membership[]
@@ -204,6 +335,10 @@ model Membership {
   role      MembershipRole
   status    MembershipStatus  @default(PENDING)
   createdAt DateTime          @default(now())
+  // COLLEGE-type societies only - the email the joiner claims as their
+  // college email, shown to the approving admin alongside the request. Not
+  // independently verified (see Society.emailDomain).
+  collegeEmail String?
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   society Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
@@ -410,12 +545,26 @@ model AreaPost {
   activityTime    String?
   partnersNeeded  Int?
   createdAt   DateTime           @default(now())
+  // Best-effort "does this look AI-generated" signal, computed once in the
+  // background right after creation (see AiService.detectAiGenerated) - an
+  // experimental heuristic, not a verified fact. Null until that check
+  // finishes; never blocks post creation itself.
+  aiGenerated        Boolean?
+  aiGeneratedConfidence Int?
 
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   interests AreaPostInterest[]
   saves     AreaPostSave[]
   comments  AreaPostComment[]
+  reactions AreaPostReaction[]
+  reports   Report[]
+  linkedReels Reel[]
 
+  // Covers the hot path (filter by area, newest-first) in one index instead
+  // of an index scan plus a separate sort step - matters increasingly as
+  // the table grows. The plain [area] index stays for queries that don't
+  // also sort by createdAt.
+  @@index([area, createdAt])
   @@index([area])
   @@index([latitude, longitude])
 }
@@ -454,6 +603,25 @@ model AreaPostComment {
   areaPost AreaPost @relation(fields: [areaPostId], references: [id], onDelete: Cascade)
   author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  @@index([areaPostId])
+}
+
+// One active emoji reaction per user per post - picking a new one replaces
+// the old one, same semantics as StoryReaction. Additive alongside
+// AreaPostInterest, not a replacement: Interest drives real-world
+// coordination (who to call about an SOS/listing), this is lightweight
+// Instagram/Facebook-style engagement.
+model AreaPostReaction {
+  id         String   @id @default(cuid())
+  areaPostId String
+  userId     String
+  emoji      String
+  createdAt  DateTime @default(now())
+
+  areaPost AreaPost @relation(fields: [areaPostId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([areaPostId, userId])
   @@index([areaPostId])
 }
 
@@ -539,10 +707,16 @@ model Reel {
   videoUrl  String
   caption   String?
   createdAt DateTime @default(now())
+  // Social commerce - "shop this reel" links to one of the author's own
+  // SHOP-kind AreaPosts. AreaPost, not the society-private Listing model:
+  // a Reel is public content, so what it links to must be too, same
+  // reasoning as EventsMapScreen reusing AreaPost over the private Event model.
+  linkedAreaPostId String?
 
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes    ReelLike[]
-  comments ReelComment[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedPost AreaPost?     @relation(fields: [linkedAreaPostId], references: [id], onDelete: SetNull)
+  likes      ReelLike[]
+  comments   ReelComment[]
 
   @@index([createdAt])
 }
@@ -648,4 +822,285 @@ model CampaignImpression {
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
+}
+
+// --- Goal communities: "join a goal" instead of "follow a person" - a
+// fixed-duration challenge (e.g. "100 Days Coding Challenge") with daily
+// check-ins and streaks, distinct from Society (place-based, open-ended).
+
+model GoalCommunity {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String?
+  durationDays  Int
+  createdById   String
+  createdAt     DateTime @default(now())
+  // One-time join fee in Niikat Coins, paid to the creator's wallet - 0
+  // means free to join (the default). Part of the Coins closed loop, not a
+  // real-money subscription; see wallet/wallet.service.ts.
+  joinCostCoins Int      @default(0)
+
+  createdBy User                  @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  members   GoalCommunityMember[]
+
+  @@index([category])
+}
+
+model GoalCommunityMember {
+  id              String    @id @default(cuid())
+  goalCommunityId String
+  userId          String
+  joinedAt        DateTime  @default(now())
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
+  // Date-only (midnight UTC), not a timestamp - check-ins are compared by
+  // calendar day, not by elapsed hours, so a 11pm-then-1am pair still counts
+  // as two different days rather than "less than 24h apart".
+  lastCheckInDate DateTime?
+
+  goalCommunity GoalCommunity   @relation(fields: [goalCommunityId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIns      GoalCheckIn[]
+
+  @@unique([goalCommunityId, userId])
+  @@index([goalCommunityId])
+}
+
+model GoalCheckIn {
+  id                    String   @id @default(cuid())
+  goalCommunityMemberId String
+  date                  DateTime
+  note                  String?
+  createdAt             DateTime @default(now())
+
+  member GoalCommunityMember @relation(fields: [goalCommunityMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([goalCommunityMemberId, date])
+}
+
+// --- Niikat Coins: closed-loop only - bought with real money via Razorpay,
+// spent only on in-app gifts/features, never redeemable back to cash. A
+// redeemable version would be regulated by RBI as a Prepaid Payment
+// Instrument / money transmission and needs a licensed payout partner
+// (e.g. RazorpayX Payouts) wired in deliberately, not bolted on here.
+
+model Wallet {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  balanceCoins  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   CoinTransaction[]
+  payoutRequests PayoutRequest[]
+}
+
+model CoinPurchase {
+  id                String   @id @default(cuid())
+  walletId          String
+  coinsAmount       Int
+  priceInPaise      Int
+  razorpayLinkId    String   @unique
+  razorpayPaymentId String?
+  status            String   @default("created")
+  createdAt         DateTime @default(now())
+}
+
+enum CoinTransactionType {
+  PURCHASE
+  GIFT_SENT
+  GIFT_RECEIVED
+  PAYOUT
+}
+
+model CoinTransaction {
+  id             String              @id @default(cuid())
+  walletId       String
+  type           CoinTransactionType
+  // Signed - positive for a credit (purchase, gift received), negative for
+  // a debit (gift sent). Balance is always the sum of a wallet's transactions,
+  // so Wallet.balanceCoins is a denormalized cache kept in sync in the same
+  // db transaction as each insert, not a separate source of truth.
+  amount         Int
+  description    String?
+  relatedUserId  String?
+  createdAt      DateTime            @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+// A creator's request to cash out earned coins (from gifts) as real money.
+// Marking PAID is a manual admin action recording that a bank/UPI transfer
+// was made OUTSIDE this app - there is no automated payout API integration
+// here. Moving real money to creators at scale has real compliance
+// obligations (TDS deduction, GST, RBI payment-aggregator rules) that need
+// a CA/lawyer's sign-off before automating; this just tracks the ledger and
+// the approval queue safely in the meantime.
+model PayoutRequest {
+  id                String       @id @default(cuid())
+  walletId          String
+  userId            String
+  amountCoins       Int
+  // Locked in at request time at the prevailing coins-per-rupee rate, so a
+  // later rate change never retroactively changes what's owed.
+  amountInPaise     Int
+  payeeName         String
+  upiId             String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  status            PayoutStatus @default(PENDING)
+  adminNote         String?
+  createdAt         DateTime     @default(now())
+  processedAt       DateTime?
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+}
+
+// --- "Build in Public" - a named project with a dated timeline of progress
+// updates ("Day 17: MVP completed"), distinct from the regular area feed:
+// followers see a story arc, not a one-off post.
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  category    String?
+  createdAt   DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updates ProjectUpdate[]
+}
+
+model ProjectUpdate {
+  id         String   @id @default(cuid())
+  projectId  String
+  dayNumber  Int?
+  body       String
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// --- Admin observability: every unhandled/HTTP error, tagged by endpoint,
+// so the admin panel can show per-feature error rates instead of the
+// founder having to guess "is X working?" from user complaints alone.
+
+model ErrorLog {
+  id         String   @id @default(cuid())
+  method     String
+  path       String
+  statusCode Int
+  message    String
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+}
+
+enum FeedbackCategory {
+  BUG
+  SUGGESTION
+  REVIEW
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+model Feedback {
+  id        String           @id @default(cuid())
+  userId    String
+  category  FeedbackCategory
+  // 1-5, only meaningful for REVIEW category - null for bug reports/suggestions.
+  rating    Int?
+  message   String
+  status    FeedbackStatus   @default(OPEN)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([category])
+}
+
+// --- Hyperlocal jobs board - "looking for a cook nearby", "hiring delivery
+// staff" - scoped by area the same way AreaPost is, not a generic job site.
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  FREELANCE
+  DAILY_WAGE
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+}
+
+model JobPosting {
+  id           String    @id @default(cuid())
+  posterId     String
+  area         String
+  pincode      String?
+  title        String
+  description  String
+  companyName  String?
+  jobType      JobType
+  salaryMin    Int?
+  salaryMax    Int?
+  // Free-text label ("monthly", "daily", "per project") - not worth its own
+  // enum since it's display-only, never filtered or computed on.
+  salaryPeriod String?
+  location     String?
+  contactPhone String?
+  status       JobStatus @default(OPEN)
+  createdAt    DateTime  @default(now())
+
+  poster       User             @relation(fields: [posterId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@index([area, createdAt])
+}
+
+enum JobApplicationStatus {
+  PENDING
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+model JobApplication {
+  id          String                @id @default(cuid())
+  jobId       String
+  applicantId String
+  message     String?
+  status      JobApplicationStatus  @default(PENDING)
+  createdAt   DateTime              @default(now())
+
+  job       JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicant User       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, applicantId])
 }

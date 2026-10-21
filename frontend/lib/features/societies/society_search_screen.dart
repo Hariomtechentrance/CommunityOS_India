@@ -15,6 +15,7 @@ class SocietySearchScreen extends ConsumerStatefulWidget {
 class _SocietySearchScreenState extends ConsumerState<SocietySearchScreen> {
   final _queryController = TextEditingController();
   final _pincodeController = TextEditingController();
+  SocietyType? _type;
   bool _loading = false;
   String? _error;
   List<Society>? _results;
@@ -28,6 +29,7 @@ class _SocietySearchScreenState extends ConsumerState<SocietySearchScreen> {
       final results = await ref.read(societyRepositoryProvider).search(
             query: _queryController.text.trim(),
             pincode: _pincodeController.text.trim(),
+            type: _type,
           );
       setState(() => _results = results);
     } catch (e) {
@@ -56,11 +58,22 @@ class _SocietySearchScreenState extends ConsumerState<SocietySearchScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                SegmentedButton<SocietyType?>(
+                  segments: const [
+                    ButtonSegment(value: null, label: Text('All')),
+                    ButtonSegment(value: SocietyType.apartment, label: Text('Apartments')),
+                    ButtonSegment(value: SocietyType.college, label: Text('Colleges')),
+                    ButtonSegment(value: SocietyType.business, label: Text('Local')),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (s) => setState(() => _type = s.first),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _queryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Society name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: _type == SocietyType.college ? 'College name' : 'Society name',
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -95,6 +108,11 @@ class _SocietySearchScreenState extends ConsumerState<SocietySearchScreen> {
                     ..._results!.map(
                       (society) => Card(
                         child: ListTile(
+                          leading: Icon(
+                            society.type == SocietyType.college
+                                ? Icons.school
+                                : Icons.apartment,
+                          ),
                           title: Text(society.name),
                           subtitle: Text(
                             '${society.addressLine}, ${society.city}, ${society.state} - ${society.pincode}',

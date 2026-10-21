@@ -50,7 +50,10 @@ export class AuthService {
       throw new ForbiddenException('This account has been suspended');
     }
 
-    await this.users.markLoggedIn(user.id);
+    // Fire-and-forget: a login timestamp is bookkeeping, not something the
+    // client needs to wait on - every login was previously paying for a
+    // full extra DB round-trip here before the token could even be issued.
+    this.users.markLoggedIn(user.id).catch(() => {});
     const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
 
     return { accessToken, user: sanitizeUser({ ...user, lastLoginAt: new Date() }) };

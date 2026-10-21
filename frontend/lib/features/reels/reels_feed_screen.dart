@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/settings/data_saver_controller.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/reel.dart';
 import 'create_reel_screen.dart';
 import 'reel_comments_sheet.dart';
+import 'reel_likes_sheet.dart';
 import 'reels_repository.dart';
 
 /// Full-screen vertical swipe feed of permanent short videos - a dedicated
@@ -183,12 +185,14 @@ class _ReelPageState extends ConsumerState<_ReelPage> with WidgetsBindingObserve
   /// Without this, backgrounding the app (or switching to another app) while
   /// a reel is playing leaves its video - and audio, once unmuted - running
   /// invisibly, since only page-swipe changes `isActive`, not app lifecycle.
+  bool get _dataSaverOn => ref.read(dataSaverControllerProvider).value ?? false;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _controller;
     if (controller == null) return;
     if (state == AppLifecycleState.resumed) {
-      if (widget.isActive) controller.play();
+      if (widget.isActive && !_dataSaverOn) controller.play();
     } else {
       controller.pause();
     }
@@ -204,7 +208,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> with WidgetsBindingObserve
       return;
     }
     setState(() => _controller = controller);
-    if (widget.isActive) controller.play();
+    if (widget.isActive && !_dataSaverOn) controller.play();
   }
 
   @override
@@ -212,7 +216,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> with WidgetsBindingObserve
     super.didUpdateWidget(oldWidget);
     if (_controller == null) return;
     if (widget.isActive && !oldWidget.isActive) {
-      _controller!.play();
+      if (!_dataSaverOn) _controller!.play();
     } else if (!widget.isActive && oldWidget.isActive) {
       _controller!.pause();
     }
@@ -354,13 +358,35 @@ class _ReelPageState extends ConsumerState<_ReelPage> with WidgetsBindingObserve
                     size: 30,
                   ),
                 ),
-                Text('${reel.likeCount}', style: const TextStyle(color: Colors.white)),
+                GestureDetector(
+                  onTap: reel.likeCount == 0
+                      ? null
+                      : () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => ReelLikesSheet(reelId: reel.id),
+                          ),
+                  child: Text(
+                    (reel.user?.id == myId || !(reel.user?.hideLikeCounts ?? false))
+                        ? '${reel.likeCount}'
+                        : '❤️',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 IconButton(
                   onPressed: _openComments,
                   icon: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
                 ),
                 Text('${reel.commentCount}', style: const TextStyle(color: Colors.white)),
+                if (reel.linkedPost != null) ...[
+                  const SizedBox(height: 16),
+                  IconButton(
+                    onPressed: () => context.push('/home/posts/${reel.linkedPost!.id}'),
+                    icon: const Icon(Icons.storefront, color: Colors.white, size: 28),
+                    tooltip: 'Shop: ${reel.linkedPost!.title}',
+                  ),
+                ],
                 if (reel.user?.id == myId) ...[
                   const SizedBox(height: 16),
                   IconButton(

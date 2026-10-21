@@ -29,7 +29,7 @@ class ListingRepository {
         'category': listingCategoryToJson(category),
         'title': title,
         'description': description,
-        if (price != null) 'price': price,
+        'price': ?price,
         if (imageUrls != null && imageUrls.isNotEmpty) 'imageUrls': imageUrls,
       },
     );

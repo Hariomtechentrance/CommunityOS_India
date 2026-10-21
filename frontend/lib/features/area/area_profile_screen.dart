@@ -14,6 +14,8 @@ import '../../models/user.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../calls/call_service.dart';
 import '../profile/avatar_picker_screen.dart';
+import '../projects/professional_profile_section.dart';
+import '../reputation/reputation_badges.dart';
 import '../users/user_repository.dart';
 import 'area_post_kind_ui.dart';
 import 'area_repository.dart';
@@ -49,7 +51,7 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
   Future<void> _pickAndUploadPhoto() async {
     final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (file == null) return;
-    final url = await MediaUploadService().upload(file);
+    final url = await ref.read(mediaUploadServiceProvider).upload(file);
     await _applyAvatar(url);
   }
 
@@ -112,6 +114,77 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
     }
   }
 
+  Future<void> _editProfessionalProfile(AppUser user) async {
+    final headlineController = TextEditingController(text: user.headline ?? '');
+    final skillsController = TextEditingController(text: user.skills.join(', '));
+    final availableForController = TextEditingController(text: user.availableFor.join(', '));
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Professional profile', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            TextField(
+              controller: headlineController,
+              decoration: const InputDecoration(
+                labelText: 'Headline',
+                hintText: 'Software Developer',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: skillsController,
+              decoration: const InputDecoration(
+                labelText: 'Skills (comma-separated)',
+                hintText: 'React, Flutter, Node.js',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: availableForController,
+              decoration: const InputDecoration(
+                labelText: 'Available for (comma-separated)',
+                hintText: 'Freelance, Jobs, Collaboration',
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved != true) return;
+
+    List<String> parseCsv(String text) =>
+        text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+    try {
+      await ref.read(userRepositoryProvider).updateProfessionalProfile(
+            headline: headlineController.text.trim(),
+            skills: parseCsv(skillsController.text),
+            availableFor: parseCsv(availableForController.text),
+          );
+      await ref.read(sessionControllerProvider.notifier).refreshUser();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(sessionControllerProvider).value?.user;
@@ -143,6 +216,11 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
               await context.push('/home/profile/edit-location');
               _load();
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/home/settings'),
           ),
         ],
       ),
@@ -258,7 +336,18 @@ class _AreaProfileScreenState extends ConsumerState<AreaProfileScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+                      ReputationBadges(userId: user.id),
+                      ProfessionalProfileSection(user: user, isSelf: true),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _editProfessionalProfile(user),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit skills / availability'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text('Neighbours (${_neighbours.length})',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),

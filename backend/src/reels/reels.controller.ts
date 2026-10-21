@@ -32,6 +32,11 @@ export class ReelsController {
     return this.reels.toggleLike(id, user.userId);
   }
 
+  @Get(':id/likes')
+  listLikers(@Param('id') id: string) {
+    return this.reels.listLikers(id);
+  }
+
   @Get(':id/comments')
   listComments(@Param('id') id: string) {
     return this.reels.listComments(id);

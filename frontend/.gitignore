@@ -45,3 +45,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing - key.properties holds the keystore password in plain
+# text, and the .jks file IS the signing key. Either leaking into git would
+# let anyone who finds it sign and publish a malicious "update" to this
+# app's existing Play Store listing.
+/android/key.properties
+/android/keystore/
+*.jks
+*.keystore

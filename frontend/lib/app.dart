@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/locale/locale_controller.dart';
 import 'core/session/session_controller.dart';
+import 'core/settings/text_scale_controller.dart';
 import 'core/theme.dart';
 import 'features/calls/call_overlay.dart';
 import 'features/emergency/emergency_alert_overlay.dart';
@@ -19,6 +20,7 @@ class CommunityOsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final locale = ref.watch(localeControllerProvider).value;
+    final textScale = ref.watch(textScaleControllerProvider).value ?? TextScaleController.defaultScale;
 
     // Reactive on purpose, not a one-time initState read - see the identical
     // fix in emergency_alert_overlay.dart for why that distinction matters.
@@ -46,8 +48,11 @@ class CommunityOsApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => EmergencyAlertOverlay(
-        child: CallOverlay(child: child),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: EmergencyAlertOverlay(
+          child: CallOverlay(child: child),
+        ),
       ),
     );
   }

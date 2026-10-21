@@ -104,7 +104,7 @@ export class FollowsService {
   ) {
     if (!this.firebaseApp) return;
     const followers = await this.prisma.follow.findMany({
-      where: { followingId: userId },
+      where: { followingId: userId, follower: { activityNotificationsEnabled: true } },
       select: { follower: { select: { id: true, fcmToken: true } } },
     });
     if (followers.length === 0) return;

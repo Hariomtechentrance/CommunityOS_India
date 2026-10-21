@@ -92,7 +92,7 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
     try {
       String? imageUrl;
       if (_image != null) {
-        imageUrl = await MediaUploadService().upload(_image!);
+        imageUrl = await ref.read(mediaUploadServiceProvider).upload(_image!);
       }
       final campaign = await ref.read(campaignsRepositoryProvider).create(
             objective: _objective,

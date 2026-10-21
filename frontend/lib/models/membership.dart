@@ -42,6 +42,7 @@ class Membership {
   final MembershipStatus status;
   final AppUser? user;
   final String? unitNumber;
+  final String? collegeEmail;
 
   Membership({
     required this.id,
@@ -52,6 +53,7 @@ class Membership {
     required this.status,
     this.user,
     this.unitNumber,
+    this.collegeEmail,
   });
 
   factory Membership.fromJson(Map<String, dynamic> json) => Membership(
@@ -67,5 +69,6 @@ class Membership {
         unitNumber: json['unit'] != null
             ? (json['unit'] as Map<String, dynamic>)['unitNumber'] as String?
             : null,
+        collegeEmail: json['collegeEmail'] as String?,
       );
 }

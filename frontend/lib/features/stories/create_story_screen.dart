@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,7 +42,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   String? _audioPath;
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
     if (picked == null) return;
     setState(() {
       _image = picked;
@@ -108,7 +114,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _error = null;
     });
     try {
-      final upload = MediaUploadService();
+      final upload = ref.read(mediaUploadServiceProvider);
       String mediaUrl;
       StoryMediaType mediaType;
       if (_image != null) {
@@ -164,7 +170,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
               child: _image != null
                   ? (_stickeredBytes != null
                       ? Image.memory(_stickeredBytes!, fit: BoxFit.contain)
-                      : Image.network(_image!.path, fit: BoxFit.contain))
+                      : (kIsWeb
+                          ? Image.network(_image!.path, fit: BoxFit.contain)
+                          : Image.file(File(_image!.path), fit: BoxFit.contain)))
                   : _videoController != null && _videoController!.value.isInitialized
                       ? AspectRatio(
                           aspectRatio: _videoController!.value.aspectRatio,

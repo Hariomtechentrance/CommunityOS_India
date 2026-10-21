@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AreaPostKind, AreaPostVisibility, MembershipStatus } from '@prisma/client';
+import { AiService } from '../ai/ai.service';
+import { BlocksService } from '../blocks/blocks.service';
 import { FollowsService } from '../follows/follows.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { MutesService } from '../mutes/mutes.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertsGateway } from './alerts.gateway';
 import { CreateAreaPostDto } from './dto/create-area-post.dto';
@@ -46,6 +49,9 @@ export class AreaService {
     private readonly emergencyAlert: EmergencyAlertService,
     private readonly alerts: AlertsGateway,
     private readonly follows: FollowsService,
+    private readonly blocks: BlocksService,
+    private readonly mutes: MutesService,
+    private readonly ai: AiService,
   ) {}
 
   async createAreaPost(userId: string, dto: CreateAreaPostDto) {
@@ -92,7 +98,23 @@ export class AreaService {
       }
     }
 
+    // Fire-and-forget: never make the author wait on an AI call (or a
+    // missing Gemini key) just to publish a post. Silently does nothing if
+    // AI isn't configured - aiGenerated stays null, which the frontend
+    // already treats as "no signal" rather than "confirmed not AI".
+    this.detectAndTagAiGenerated(post.id, `${post.title}\n\n${post.description}`).catch(() => {});
+
     return post;
+  }
+
+  private async detectAndTagAiGenerated(postId: string, text: string) {
+    if (!this.ai.isConfigured) return;
+    const result = await this.ai.detectAiGenerated(text);
+    if (!result) return;
+    await this.prisma.areaPost.update({
+      where: { id: postId },
+      data: { aiGenerated: result.likely, aiGeneratedConfidence: result.confidence },
+    });
   }
 
   /**
@@ -165,6 +187,17 @@ export class AreaService {
       select: { areaPostId: true },
     });
     return new Set(saves.map((s) => s.areaPostId));
+  }
+
+  /** This viewer's own emoji pick per post, batched the same way as
+   * savedIdsOf - feed cards need it to highlight the viewer's reaction. */
+  private async myReactionsOf(userId?: string): Promise<Map<string, string>> {
+    if (!userId) return new Map();
+    const reactions = await this.prisma.areaPostReaction.findMany({
+      where: { userId },
+      select: { areaPostId: true, emoji: true },
+    });
+    return new Map(reactions.map((r) => [r.areaPostId, r.emoji]));
   }
 
   /**
@@ -257,15 +290,62 @@ export class AreaService {
         ...(kind ? { kind } : {}),
         ...(onlyMine && viewerUserId ? { userId: viewerUserId } : {}),
       },
-      include: { user: true, _count: { select: { interests: true } } },
+      include: { user: true, _count: { select: { interests: true, reactions: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
-    const savedIds = await this.savedIdsOf(viewerUserId);
-    const verifiedIds = await this.verifiedUserIds(posts.map((p) => p.userId));
+    const [savedIds, myReactions, verifiedIds, blockedIds, mutedIds] = await Promise.all([
+      this.savedIdsOf(viewerUserId),
+      this.myReactionsOf(viewerUserId),
+      this.verifiedUserIds(posts.map((p) => p.userId)),
+      viewerUserId ? this.blocks.blockedUserIds(viewerUserId) : Promise.resolve([]),
+      viewerUserId ? this.mutes.mutedUserIds(viewerUserId) : Promise.resolve([]),
+    ]);
     return posts
+      .filter((post) => !blockedIds.includes(post.userId) && !mutedIds.includes(post.userId))
       .filter((post) => this.isVisibleTo(post, viewerUserId, viewer))
-      .map((post) => this.withVerifiedAuthor({ ...post, mySaved: savedIds.has(post.id) }, verifiedIds));
+      .map((post) =>
+        this.withVerifiedAuthor(
+          { ...post, mySaved: savedIds.has(post.id), myReaction: myReactions.get(post.id) ?? null },
+          verifiedIds,
+        ),
+      );
+  }
+
+  /**
+   * "For You" - the same area feed, re-ranked by a transparent heuristic
+   * instead of plain recency: how many of the viewer's stated interests
+   * (set in Niikat Connect settings) appear in the post's title/description,
+   * plus how much engagement it already has, with a recency tie-breaker.
+   * This is deliberately NOT a real ML recommender (no embeddings, no
+   * collaborative filtering, no click-through training) - just keyword
+   * overlap + engagement counts, kept simple and inspectable rather than a
+   * black box, which is the right amount of sophistication for this app's
+   * current scale.
+   */
+  async listForYou(area: string, viewerUserId: string) {
+    const [posts, viewerUser] = await Promise.all([
+      this.listForArea(area, undefined, viewerUserId, false),
+      this.prisma.user.findUnique({ where: { id: viewerUserId }, select: { interests: true } }),
+    ]);
+
+    const interests = (viewerUser?.interests ?? []).map((i) => i.toLowerCase());
+    const now = Date.now();
+
+    return posts
+      .map((post) => {
+        const haystack = `${post.title} ${post.description}`.toLowerCase();
+        const interestMatches = interests.filter((i) => haystack.includes(i)).length;
+        const engagement = post._count.interests + post._count.reactions;
+        const ageHours = (now - post.createdAt.getTime()) / (1000 * 60 * 60);
+        // Interest overlap dominates the score; engagement is a smaller
+        // tie-breaker; a gentle recency decay keeps week-old posts from
+        // permanently outranking fresh ones just for having more likes.
+        const score = interestMatches * 100 + engagement * 5 - ageHours * 0.5;
+        return { post, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.post);
   }
 
   async listNearby(
@@ -279,26 +359,37 @@ export class AreaService {
     const latDelta = radiusKm / 111;
     const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
 
-    const candidates = await this.prisma.areaPost.findMany({
-      where: {
-        latitude: { gte: lat - latDelta, lte: lat + latDelta },
-        longitude: { gte: lng - lngDelta, lte: lng + lngDelta },
-        ...(kind ? { kind } : {}),
-      },
-      include: { user: true, _count: { select: { interests: true } } },
-    });
+    // viewerLocationOf doesn't depend on candidates, so it runs alongside
+    // the posts query instead of after it.
+    const [candidates, viewer] = await Promise.all([
+      this.prisma.areaPost.findMany({
+        where: {
+          latitude: { gte: lat - latDelta, lte: lat + latDelta },
+          longitude: { gte: lng - lngDelta, lte: lng + lngDelta },
+          ...(kind ? { kind } : {}),
+        },
+        include: { user: true, _count: { select: { interests: true, reactions: true } } },
+      }),
+      this.viewerLocationOf(viewerUserId),
+    ]);
 
-    const viewer = await this.viewerLocationOf(viewerUserId);
-    const savedIds = await this.savedIdsOf(viewerUserId);
-    const verifiedIds = await this.verifiedUserIds(candidates.map((p) => p.userId));
+    const [savedIds, myReactions, verifiedIds, blockedIds, mutedIds] = await Promise.all([
+      this.savedIdsOf(viewerUserId),
+      this.myReactionsOf(viewerUserId),
+      this.verifiedUserIds(candidates.map((p) => p.userId)),
+      viewerUserId ? this.blocks.blockedUserIds(viewerUserId) : Promise.resolve([]),
+      viewerUserId ? this.mutes.mutedUserIds(viewerUserId) : Promise.resolve([]),
+    ]);
 
     return candidates
+      .filter((post) => !blockedIds.includes(post.userId) && !mutedIds.includes(post.userId))
       .filter((post) => this.isVisibleTo(post, viewerUserId, viewer))
       .map((post) =>
         this.withVerifiedAuthor(
           {
             ...post,
             mySaved: savedIds.has(post.id),
+            myReaction: myReactions.get(post.id) ?? null,
             distanceKm: haversineKm(lat, lng, post.latitude!, post.longitude!),
           },
           verifiedIds,
@@ -343,13 +434,14 @@ export class AreaService {
   }
 
   async findOne(id: string, viewerUserId?: string) {
-    const post = await this.prisma.areaPost.findUnique({
-      where: { id },
-      include: { user: true, _count: { select: { interests: true } } },
-    });
+    const [post, viewer] = await Promise.all([
+      this.prisma.areaPost.findUnique({
+        where: { id },
+        include: { user: true, _count: { select: { interests: true, reactions: true } } },
+      }),
+      this.viewerLocationOf(viewerUserId),
+    ]);
     if (!post) throw new NotFoundException('Post not found');
-
-    const viewer = await this.viewerLocationOf(viewerUserId);
     if (!this.isVisibleTo(post, viewerUserId, viewer)) {
       throw new NotFoundException('Post not found');
     }
@@ -380,8 +472,21 @@ export class AreaService {
       }
     }
 
-    const verifiedIds = await this.verifiedUserIds(post.userId ? [post.userId] : []);
-    return this.withVerifiedAuthor({ ...post, myInterest, mySaved, interestedUsers }, verifiedIds);
+    const [reactions, verifiedIds] = await Promise.all([
+      this.reactionSummary(id, viewerUserId),
+      this.verifiedUserIds(post.userId ? [post.userId] : []),
+    ]);
+    return this.withVerifiedAuthor(
+      {
+        ...post,
+        myInterest,
+        mySaved,
+        interestedUsers,
+        myReaction: reactions.myReaction,
+        reactionCounts: reactions.counts,
+      },
+      verifiedIds,
+    );
   }
 
   async toggleInterest(areaPostId: string, userId: string) {
@@ -399,6 +504,58 @@ export class AreaService {
     // block the toggle itself on notification delivery.
     this.notifyFollowersOfInterest(areaPostId, userId).catch(() => {});
     return { interested: true };
+  }
+
+  /** One active emoji per user per post - picking a new one replaces the old
+   * one, same semantics as Story reactions. Returns the fresh summary so the
+   * caller never needs a second round-trip. */
+  async react(areaPostId: string, userId: string, emoji: string) {
+    await this.prisma.areaPostReaction.upsert({
+      where: { areaPostId_userId: { areaPostId, userId } },
+      create: { areaPostId, userId, emoji },
+      update: { emoji },
+    });
+    return this.reactionSummary(areaPostId, userId);
+  }
+
+  async removeReaction(areaPostId: string, userId: string) {
+    await this.prisma.areaPostReaction.deleteMany({ where: { areaPostId, userId } });
+    return this.reactionSummary(areaPostId, userId);
+  }
+
+  /** Counts per emoji plus this viewer's own pick (if any) - the summary a
+   * post card needs to render its reaction bar without a separate list. */
+  async reactionSummary(areaPostId: string, viewerUserId?: string) {
+    const [grouped, mine] = await Promise.all([
+      this.prisma.areaPostReaction.groupBy({
+        by: ['emoji'],
+        where: { areaPostId },
+        _count: { emoji: true },
+      }),
+      viewerUserId
+        ? this.prisma.areaPostReaction.findUnique({
+            where: { areaPostId_userId: { areaPostId, userId: viewerUserId } },
+          })
+        : null,
+    ]);
+    return {
+      counts: Object.fromEntries(grouped.map((g) => [g.emoji, g._count.emoji])),
+      myReaction: mine?.emoji ?? null,
+    };
+  }
+
+  /** Public, like Reels' listLikers - who reacted (and with what), newest
+   * first. Optionally narrowed to one emoji for a per-emoji breakdown. */
+  async listReactors(areaPostId: string, emoji?: string) {
+    const reactions = await this.prisma.areaPostReaction.findMany({
+      where: { areaPostId, ...(emoji ? { emoji } : {}) },
+      select: {
+        emoji: true,
+        user: { select: { id: true, name: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return reactions.map((r) => ({ ...r.user, emoji: r.emoji }));
   }
 
   private async notifyFollowersOfInterest(areaPostId: string, userId: string) {
@@ -430,11 +587,19 @@ export class AreaService {
   async listSaved(userId: string) {
     const posts = await this.prisma.areaPost.findMany({
       where: { saves: { some: { userId } } },
-      include: { user: true, _count: { select: { interests: true } } },
+      include: { user: true, _count: { select: { interests: true, reactions: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    const verifiedIds = await this.verifiedUserIds(posts.map((p) => p.userId));
-    return posts.map((post) => this.withVerifiedAuthor({ ...post, mySaved: true }, verifiedIds));
+    const [myReactions, verifiedIds] = await Promise.all([
+      this.myReactionsOf(userId),
+      this.verifiedUserIds(posts.map((p) => p.userId)),
+    ]);
+    return posts.map((post) =>
+      this.withVerifiedAuthor(
+        { ...post, mySaved: true, myReaction: myReactions.get(post.id) ?? null },
+        verifiedIds,
+      ),
+    );
   }
 
   listComments(areaPostId: string) {

@@ -87,9 +87,11 @@ class _ManageMembersScreenState extends ConsumerState<ManageMembersScreen> {
                             child: ListTile(
                               title: Text(membership.user?.phone ?? membership.userId),
                               subtitle: Text(
-                                membership.unitNumber != null
-                                    ? 'Unit ${membership.unitNumber}'
-                                    : 'No unit specified',
+                                membership.collegeEmail != null
+                                    ? 'Claimed college email: ${membership.collegeEmail}'
+                                    : membership.unitNumber != null
+                                        ? 'Unit ${membership.unitNumber}'
+                                        : 'No unit specified',
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,

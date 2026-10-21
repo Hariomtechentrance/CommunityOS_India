@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/session/session_controller.dart';
+import '../../models/society.dart';
 import '../membership/membership_repository.dart';
 import 'society_repository.dart';
 
@@ -18,6 +19,8 @@ class _CreateSocietyScreenState extends ConsumerState<CreateSocietyScreen> {
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
+  final _emailDomainController = TextEditingController();
+  SocietyType _type = SocietyType.apartment;
   bool _loading = false;
   String? _error;
 
@@ -33,6 +36,9 @@ class _CreateSocietyScreenState extends ConsumerState<CreateSocietyScreen> {
             city: _cityController.text.trim(),
             state: _stateController.text.trim(),
             pincode: _pincodeController.text.trim(),
+            type: _type,
+            emailDomain:
+                _type == SocietyType.college ? _emailDomainController.text.trim() : null,
           );
       final membership =
           await ref.read(membershipRepositoryProvider).findMine(society.id);
@@ -54,6 +60,7 @@ class _CreateSocietyScreenState extends ConsumerState<CreateSocietyScreen> {
     _cityController.dispose();
     _stateController.dispose();
     _pincodeController.dispose();
+    _emailDomainController.dispose();
     super.dispose();
   }
 
@@ -73,14 +80,58 @@ class _CreateSocietyScreenState extends ConsumerState<CreateSocietyScreen> {
                   'You will become this society\'s Committee Admin automatically.',
                 ),
                 const SizedBox(height: 16),
+                SegmentedButton<SocietyType>(
+                  segments: const [
+                    ButtonSegment(
+                      value: SocietyType.apartment,
+                      label: Text('Apartment / Society'),
+                      icon: Icon(Icons.apartment),
+                    ),
+                    ButtonSegment(
+                      value: SocietyType.college,
+                      label: Text('College'),
+                      icon: Icon(Icons.school),
+                    ),
+                    ButtonSegment(
+                      value: SocietyType.business,
+                      label: Text('Local community'),
+                      icon: Icon(Icons.storefront),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (s) => setState(() => _type = s.first),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Society name',
-                    hintText: 'Prestige Lakeside Habitat',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: switch (_type) {
+                      SocietyType.college => 'College name',
+                      SocietyType.business => 'Community name',
+                      SocietyType.apartment => 'Society name',
+                    },
+                    hintText: switch (_type) {
+                      SocietyType.college => 'Sandip University',
+                      SocietyType.business => 'Bangalore Food Community',
+                      SocietyType.apartment => 'Prestige Lakeside Habitat',
+                    },
+                    border: const OutlineInputBorder(),
                   ),
                 ),
+                if (_type == SocietyType.college) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _emailDomainController,
+                    decoration: const InputDecoration(
+                      labelText: 'College email domain (optional)',
+                      hintText: 'sandipuniversity.edu.in',
+                      helperText:
+                          'Shown to joiners as what their college email should end with. '
+                          'Not independently verified - you still approve each request.',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: _addressController,

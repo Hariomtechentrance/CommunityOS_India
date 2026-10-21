@@ -41,8 +41,8 @@ class UserRepository {
         if (state != null && state.isNotEmpty) 'state': state,
         if (pincode != null && pincode.isNotEmpty) 'pincode': pincode,
         if (area != null && area.isNotEmpty) 'area': area,
-        if (lat != null) 'lat': lat,
-        if (lng != null) 'lng': lng,
+        'lat': ?lat,
+        'lng': ?lng,
       },
     );
     return AppUser.fromJson(res.data as Map<String, dynamic>);
@@ -72,6 +72,42 @@ class UserRepository {
   Future<AppUser> updateAvatar(String avatarUrl) async {
     final res = await _client.dio.patch('/users/me/avatar', data: {'avatarUrl': avatarUrl});
     return AppUser.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<AppUser> updateNotificationSettings({
+    bool? activityNotificationsEnabled,
+    bool? hideLikeCounts,
+    String? allowMessagesFrom,
+  }) async {
+    final res = await _client.dio.patch(
+      '/users/me/notification-settings',
+      data: {
+        'activityNotificationsEnabled': ?activityNotificationsEnabled,
+        'hideLikeCounts': ?hideLikeCounts,
+        'allowMessagesFrom': ?allowMessagesFrom,
+      },
+    );
+    return AppUser.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<AppUser> updateProfessionalProfile({
+    String? headline,
+    List<String>? skills,
+    List<String>? availableFor,
+  }) async {
+    final res = await _client.dio.patch(
+      '/users/me/professional-profile',
+      data: {
+        'headline': ?headline,
+        'skills': ?skills,
+        'availableFor': ?availableFor,
+      },
+    );
+    return AppUser.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAccount() {
+    return _client.dio.delete('/users/me');
   }
 }
 

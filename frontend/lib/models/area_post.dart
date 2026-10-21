@@ -180,6 +180,11 @@ class AreaPost {
   final bool mySaved;
   final List<AppUser>? interestedUsers;
   final double? distanceKm;
+  final int reactionCount;
+  final String? myReaction;
+  final Map<String, int> reactionCounts;
+  final bool? aiGenerated;
+  final int? aiGeneratedConfidence;
 
   AreaPost({
     required this.id,
@@ -212,6 +217,11 @@ class AreaPost {
     this.mySaved = false,
     this.interestedUsers,
     this.distanceKm,
+    this.reactionCount = 0,
+    this.myReaction,
+    this.reactionCounts = const {},
+    this.aiGenerated,
+    this.aiGeneratedConfidence,
   });
 
   factory AreaPost.fromJson(Map<String, dynamic> json) => AreaPost(
@@ -253,6 +263,17 @@ class AreaPost {
                 .toList()
             : null,
         distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+        reactionCount: json['_count'] != null
+            ? (json['_count'] as Map<String, dynamic>)['reactions'] as int? ?? 0
+            : 0,
+        myReaction: json['myReaction'] as String?,
+        reactionCounts: json['reactionCounts'] != null
+            ? (json['reactionCounts'] as Map<String, dynamic>).map(
+                (k, v) => MapEntry(k, v as int),
+              )
+            : const {},
+        aiGenerated: json['aiGenerated'] as bool?,
+        aiGeneratedConfidence: json['aiGeneratedConfidence'] as int?,
       );
 }
 

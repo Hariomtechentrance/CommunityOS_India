@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class RequestMembershipDto {
   @ApiPropertyOptional({ example: 'A-1203', description: 'Flat/unit number, e.g. "A-1203"' })
@@ -11,4 +11,12 @@ export class RequestMembershipDto {
   @IsOptional()
   @IsString()
   blockName?: string;
+
+  @ApiPropertyOptional({
+    example: 'hariom@sandipuniversity.edu.in',
+    description: 'COLLEGE-type societies only - claimed college email, shown to the approving admin',
+  })
+  @IsOptional()
+  @IsEmail()
+  collegeEmail?: string;
 }

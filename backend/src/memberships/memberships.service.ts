@@ -45,6 +45,7 @@ export class MembershipsService {
         userId,
         societyId,
         unitId,
+        collegeEmail: dto.collegeEmail,
         role: MembershipRole.RESIDENT,
         status: MembershipStatus.PENDING,
       },

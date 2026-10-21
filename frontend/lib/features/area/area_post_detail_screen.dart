@@ -1,15 +1,21 @@
 import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
+import '../../core/curated_emoji.dart';
+import '../ai/translate_sheet.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/widgets/ai_generated_badge.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/area_post.dart';
 import '../calls/call_service.dart';
+import '../reports/report_sheet.dart';
 import 'area_post_kind_ui.dart';
+import 'area_post_reactors_sheet.dart';
 import 'area_repository.dart';
 
 class AreaPostDetailScreen extends ConsumerStatefulWidget {
@@ -66,6 +72,45 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     }
+  }
+
+  Future<void> _react(String emoji) async {
+    try {
+      if (_post?.myReaction == emoji) {
+        await ref.read(areaRepositoryProvider).removeReaction(widget.postId);
+      } else {
+        await ref.read(areaRepositoryProvider).react(widget.postId, emoji);
+      }
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
+  Future<void> _showReactionPicker() async {
+    final emoji = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: curatedEmoji
+                .map(
+                  (e) => GestureDetector(
+                    onTap: () => Navigator.of(context).pop(e),
+                    child: Text(e, style: const TextStyle(fontSize: 28)),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    if (emoji != null) _react(emoji);
   }
 
   Future<void> _toggleSave() async {
@@ -162,6 +207,26 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
               tooltip: _post!.mySaved ? 'Saved' : 'Save',
               onPressed: _toggleSave,
             ),
+            IconButton(
+              icon: const Icon(Icons.translate),
+              tooltip: 'Translate',
+              onPressed: () => showTranslateSheet(
+                context,
+                ref,
+                '${_post!.title}\n\n${_post!.description}',
+              ),
+            ),
+            if (!_isOwner)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'report') {
+                    showReportSheet(context, ref, postId: widget.postId);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'report', child: Text('Report')),
+                ],
+              ),
           ],
         ],
       ),
@@ -186,10 +251,10 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                           .map(
                                             (url) => ClipRRect(
                                               borderRadius: BorderRadius.circular(8),
-                                              child: Image.network(
-                                                url,
+                                              child: CachedNetworkImage(
+                                                imageUrl: url,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (_, _, _) => const ColoredBox(
+                                                errorWidget: (_, _, _) => const ColoredBox(
                                                   color: Color(0xFFEEEEEE),
                                                   child: Icon(Icons.image_not_supported),
                                                 ),
@@ -212,7 +277,16 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                   _AudioAttachment(url: _post!.audioUrl!),
                                 ],
                                 const SizedBox(height: 16),
-                                Chip(label: Text(areaPostKindLabel(_post!.kind))),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Chip(label: Text(areaPostKindLabel(_post!.kind))),
+                                    if (_post!.aiGenerated == true)
+                                      AiGeneratedBadge(confidence: _post!.aiGeneratedConfidence),
+                                  ],
+                                ),
                                 const SizedBox(height: 8),
                                 Text(_post!.title, style: Theme.of(context).textTheme.headlineSmall),
                                 const SizedBox(height: 8),
@@ -311,6 +385,37 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
                                         ),
                                       ),
                                       _CallButton(post: _post!),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    ActionChip(
+                                      avatar: Text(
+                                        _post!.myReaction ?? '🙂',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      label: Text(_post!.myReaction != null ? 'Reacted' : 'React'),
+                                      onPressed: _showReactionPicker,
+                                    ),
+                                    if (_post!.reactionCount > 0) ...[
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () => showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          builder: (_) =>
+                                              AreaPostReactorsSheet(areaPostId: widget.postId),
+                                        ),
+                                        child: Text(
+                                          (_isOwner || !(_post!.user?.hideLikeCounts ?? false))
+                                              ? _post!.reactionCounts.entries
+                                                  .map((e) => '${e.key} ${e.value}')
+                                                  .join('  ')
+                                              : 'See who reacted',
+                                        ),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -438,9 +543,9 @@ class _AreaPostDetailScreenState extends ConsumerState<AreaPostDetailScreen> {
     };
     final selectedLabel =
         _post!.kind == AreaPostKind.emergencySos ? 'Offered to help' : 'Interested';
-    return _post!.myInterest
-        ? '$selectedLabel (${_post!.interestCount})'
-        : '$label (${_post!.interestCount})';
+    final countText =
+        (_post!.user?.hideLikeCounts ?? false) ? '' : ' (${_post!.interestCount})';
+    return _post!.myInterest ? '$selectedLabel$countText' : '$label$countText';
   }
 }
 

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -143,8 +144,8 @@ class _CampaignCard extends StatelessWidget {
             if (campaign.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  campaign.imageUrl!,
+                child: CachedNetworkImage(
+                  imageUrl: campaign.imageUrl!,
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,

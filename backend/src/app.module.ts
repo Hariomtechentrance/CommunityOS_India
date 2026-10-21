@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ErrorLogFilter } from './common/error-log.filter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -9,6 +10,19 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { FollowsModule } from './follows/follows.module';
+import { BlocksModule } from './blocks/blocks.module';
+import { MutesModule } from './mutes/mutes.module';
+import { ReportsModule } from './reports/reports.module';
+import { ReputationModule } from './reputation/reputation.module';
+import { GoalCommunitiesModule } from './goal-communities/goal-communities.module';
+import { WalletModule } from './wallet/wallet.module';
+import { SearchModule } from './search/search.module';
+import { ProjectsModule } from './projects/projects.module';
+import { ConnectModule } from './connect/connect.module';
+import { AiModule } from './ai/ai.module';
+import { MediaModule } from './media/media.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { JobsModule } from './jobs/jobs.module';
 import { SocietiesModule } from './societies/societies.module';
 import { MembershipsModule } from './memberships/memberships.module';
 import { NoticesModule } from './notices/notices.module';
@@ -41,6 +55,19 @@ import { CampaignsModule } from './campaigns/campaigns.module';
     AuthModule,
     UsersModule,
     FollowsModule,
+    BlocksModule,
+    MutesModule,
+    ReportsModule,
+    ReputationModule,
+    GoalCommunitiesModule,
+    WalletModule,
+    SearchModule,
+    ProjectsModule,
+    ConnectModule,
+    AiModule,
+    MediaModule,
+    FeedbackModule,
+    JobsModule,
     SocietiesModule,
     MembershipsModule,
     NoticesModule,
@@ -60,6 +87,10 @@ import { CampaignsModule } from './campaigns/campaigns.module';
     CampaignsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: ErrorLogFilter },
+  ],
 })
 export class AppModule {}

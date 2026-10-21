@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { SocietyType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MembershipsService } from '../memberships/memberships.service';
 import { CreateSocietyDto } from './dto/create-society.dto';
@@ -22,11 +23,12 @@ export class SocietiesService {
     return society;
   }
 
-  search(query?: string, pincode?: string) {
+  search(query?: string, pincode?: string, type?: SocietyType) {
     return this.prisma.society.findMany({
       where: {
         ...(query ? { name: { contains: query, mode: 'insensitive' } } : {}),
         ...(pincode ? { pincode } : {}),
+        ...(type ? { type } : {}),
       },
       take: 20,
     });

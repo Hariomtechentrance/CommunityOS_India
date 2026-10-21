@@ -17,8 +17,11 @@ class JoinSocietyScreen extends ConsumerStatefulWidget {
 class _JoinSocietyScreenState extends ConsumerState<JoinSocietyScreen> {
   final _unitController = TextEditingController();
   final _blockController = TextEditingController();
+  final _collegeEmailController = TextEditingController();
   bool _loading = false;
   String? _error;
+
+  bool get _isCollege => widget.society.type == SocietyType.college;
 
   Future<void> _submit() async {
     setState(() {
@@ -28,8 +31,9 @@ class _JoinSocietyScreenState extends ConsumerState<JoinSocietyScreen> {
     try {
       final membership = await ref.read(membershipRepositoryProvider).requestToJoin(
             widget.society.id,
-            unitNumber: _unitController.text.trim(),
-            blockName: _blockController.text.trim(),
+            unitNumber: _isCollege ? null : _unitController.text.trim(),
+            blockName: _isCollege ? null : _blockController.text.trim(),
+            collegeEmail: _isCollege ? _collegeEmailController.text.trim() : null,
           );
       await ref
           .read(sessionControllerProvider.notifier)
@@ -46,6 +50,7 @@ class _JoinSocietyScreenState extends ConsumerState<JoinSocietyScreen> {
   void dispose() {
     _unitController.dispose();
     _blockController.dispose();
+    _collegeEmailController.dispose();
     super.dispose();
   }
 
@@ -61,25 +66,43 @@ class _JoinSocietyScreenState extends ConsumerState<JoinSocietyScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Enter your unit details. A Committee Admin will approve your request.'),
+                Text(
+                  _isCollege
+                      ? 'A Committee Admin will approve your request.'
+                      : 'Enter your unit details. A Committee Admin will approve your request.',
+                ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _unitController,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit / Flat number',
-                    hintText: 'A-1203',
-                    border: OutlineInputBorder(),
+                if (_isCollege)
+                  TextField(
+                    controller: _collegeEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'College email',
+                      hintText: widget.society.emailDomain != null
+                          ? 'you@${widget.society.emailDomain}'
+                          : 'you@college.edu',
+                      border: const OutlineInputBorder(),
+                    ),
+                  )
+                else ...[
+                  TextField(
+                    controller: _unitController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit / Flat number',
+                      hintText: 'A-1203',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _blockController,
-                  decoration: const InputDecoration(
-                    labelText: 'Block / Tower (optional)',
-                    hintText: 'Tower A',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _blockController,
+                    decoration: const InputDecoration(
+                      labelText: 'Block / Tower (optional)',
+                      hintText: 'Tower A',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

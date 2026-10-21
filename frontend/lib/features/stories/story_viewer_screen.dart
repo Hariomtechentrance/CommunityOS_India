@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -155,7 +156,7 @@ class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen>
                           child: VideoPlayer(_videoController!),
                         )
                       : const CircularProgressIndicator())
-                  : Image.network(_current.mediaUrl, fit: BoxFit.contain),
+                  : CachedNetworkImage(imageUrl: _current.mediaUrl, fit: BoxFit.contain),
             ),
             Row(
               children: [

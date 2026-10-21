@@ -17,12 +17,14 @@ class MembershipRepository {
     String societyId, {
     String? unitNumber,
     String? blockName,
+    String? collegeEmail,
   }) async {
     final res = await _client.dio.post(
       '/societies/$societyId/memberships',
       data: {
         if (unitNumber != null && unitNumber.isNotEmpty) 'unitNumber': unitNumber,
         if (blockName != null && blockName.isNotEmpty) 'blockName': blockName,
+        if (collegeEmail != null && collegeEmail.isNotEmpty) 'collegeEmail': collegeEmail,
       },
     );
     return Membership.fromJson(res.data as Map<String, dynamic>);

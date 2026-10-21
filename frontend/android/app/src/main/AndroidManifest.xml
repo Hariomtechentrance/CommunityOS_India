@@ -23,7 +23,9 @@
     <application
         android:label="NIKAT"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDLaBrYN60dA-fPzQYRKQO9dVIs_YVyEYU"/>

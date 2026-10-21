@@ -157,16 +157,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 340,
-                mainAxisExtent: 230,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _PillarCard(pillar: pillars[index]),
-                childCount: pillars.length,
+            sliver: SliverToBoxAdapter(
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  for (final pillar in pillars)
+                    SizedBox(width: 320, child: _PillarCard(pillar: pillar)),
+                ],
               ),
             ),
           ),

@@ -24,7 +24,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   String? _error;
 
   Future<void> _pickImages() async {
-    final picked = await ImagePicker().pickMultiImage(limit: 5);
+    final picked = await ImagePicker().pickMultiImage(limit: 5, imageQuality: 85, maxWidth: 1600);
     if (picked.isEmpty) return;
     setState(() {
       _images
@@ -43,7 +43,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     try {
       List<String>? imageUrls;
       if (_images.isNotEmpty) {
-        imageUrls = await MediaUploadService().uploadAll(_images);
+        imageUrls = await ref.read(mediaUploadServiceProvider).uploadAll(_images);
       }
       final priceText = _priceController.text.trim();
       await ref.read(listingRepositoryProvider).create(

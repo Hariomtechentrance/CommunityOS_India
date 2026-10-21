@@ -26,6 +26,7 @@ export class AuthController {
     return this.auth.loginAsDemo();
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Get('demo-users')
   demoUsers() {
     return this.auth.listDemoUsers();

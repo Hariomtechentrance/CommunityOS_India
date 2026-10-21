@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
@@ -116,7 +118,9 @@ class _StoryStickerEditorState extends State<StoryStickerEditor> {
                 key: _boundaryKey,
                 child: Stack(
                   children: [
-                    Image.network(widget.image.path, fit: BoxFit.contain),
+                    kIsWeb
+                        ? Image.network(widget.image.path, fit: BoxFit.contain)
+                        : Image.file(File(widget.image.path), fit: BoxFit.contain),
                     for (final overlay in _overlays)
                       Positioned(
                         left: overlay.position.dx,

@@ -22,7 +22,7 @@ class StoryRepository {
       data: {
         'mediaUrl': mediaUrl,
         'mediaType': storyMediaTypeToJson(mediaType),
-        if (audioUrl != null) 'audioUrl': audioUrl,
+        'audioUrl': ?audioUrl,
       },
     );
     return Story.fromJson(res.data as Map<String, dynamic>);

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../models/area_post.dart';
+import '../../models/user.dart';
 
 class AreaRepository {
   final ApiClient _client;
@@ -16,6 +17,14 @@ class AreaRepository {
         if (mine) 'mine': 'true',
       },
     );
+    return (res.data as List).map((e) => AreaPost.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Personalized feed ranked by overlap with the viewer's interests,
+  /// reaction/interest engagement, and recency - a lightweight Instagram-style
+  /// "For You" feed. See AreaService.listForYou on the backend for the scoring.
+  Future<List<AreaPost>> forYou(String area) async {
+    final res = await _client.dio.get('/area-posts/for-you', queryParameters: {'area': area});
     return (res.data as List).map((e) => AreaPost.fromJson(e as Map<String, dynamic>)).toList();
   }
 
@@ -52,20 +61,20 @@ class AreaRepository {
         if (location != null && location.isNotEmpty) 'location': location,
         if (sportName != null && sportName.isNotEmpty) 'sportName': sportName,
         'visibility': areaPostVisibilityToJson(visibility),
-        if (radiusKm != null) 'radiusKm': radiusKm,
+        'radiusKm': ?radiusKm,
         if (serviceType != null && serviceType.isNotEmpty) 'serviceType': serviceType,
         if (businessCategory != null && businessCategory.isNotEmpty)
           'businessCategory': businessCategory,
         if (offerText != null && offerText.isNotEmpty) 'offerText': offerText,
-        if (videoUrl != null) 'videoUrl': videoUrl,
-        if (videoTrimStart != null) 'videoTrimStart': videoTrimStart,
-        if (videoTrimEnd != null) 'videoTrimEnd': videoTrimEnd,
-        if (audioUrl != null) 'audioUrl': audioUrl,
+        'videoUrl': ?videoUrl,
+        'videoTrimStart': ?videoTrimStart,
+        'videoTrimEnd': ?videoTrimEnd,
+        'audioUrl': ?audioUrl,
         if (emergencyCategory != null)
           'emergencyCategory': emergencyCategoryToJson(emergencyCategory),
         if (businessHours != null && businessHours.isNotEmpty) 'businessHours': businessHours,
         if (activityTime != null && activityTime.isNotEmpty) 'activityTime': activityTime,
-        if (partnersNeeded != null) 'partnersNeeded': partnersNeeded,
+        'partnersNeeded': ?partnersNeeded,
       },
     );
     return AreaPost.fromJson(res.data as Map<String, dynamic>);
@@ -120,6 +129,26 @@ class AreaRepository {
   Future<bool> toggleInterest(String areaPostId) async {
     final res = await _client.dio.post('/area-posts/$areaPostId/interest');
     return res.data['interested'] as bool;
+  }
+
+  /// Returns the fresh summary ({myReaction, counts}) so the caller can
+  /// update its UI without a second round-trip.
+  Future<Map<String, dynamic>> react(String areaPostId, String emoji) async {
+    final res = await _client.dio.post('/area-posts/$areaPostId/react', data: {'emoji': emoji});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> removeReaction(String areaPostId) async {
+    final res = await _client.dio.delete('/area-posts/$areaPostId/react');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<List<AppUser>> listReactors(String areaPostId, {String? emoji}) async {
+    final res = await _client.dio.get(
+      '/area-posts/$areaPostId/reactions',
+      queryParameters: {if (emoji != null) 'emoji': emoji},
+    );
+    return (res.data as List).map((e) => AppUser.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   /// Aggregate-only counts of people with the app currently open nearby -

@@ -1,13 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { MessagePrivacy } from '@prisma/client';
+import type { App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { BlocksService } from '../blocks/blocks.service';
+import { FIREBASE_ADMIN } from '../auth/firebase-admin.provider';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly geocoding: GeocodingService,
+    private readonly blocks: BlocksService,
+    @Inject(FIREBASE_ADMIN) private readonly firebaseApp: App | null,
   ) {}
 
   findByPhone(phone: string) {
@@ -33,6 +42,10 @@ export class UsersService {
         area: true,
         city: true,
         createdAt: true,
+        headline: true,
+        skills: true,
+        availableFor: true,
+        hideLikeCounts: true,
       },
     });
     if (!user) throw new NotFoundException('User not found');
@@ -51,9 +64,19 @@ export class UsersService {
         OR: [
           { username: { startsWith: q, mode: 'insensitive' } },
           { name: { contains: q, mode: 'insensitive' } },
+          { headline: { contains: q, mode: 'insensitive' } },
+          { skills: { has: q } },
         ],
       },
-      select: { id: true, name: true, username: true, avatarUrl: true, area: true },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        avatarUrl: true,
+        area: true,
+        headline: true,
+        skills: true,
+      },
       take: 20,
     });
   }
@@ -149,15 +172,34 @@ export class UsersService {
     });
   }
 
-  listNeighbours(area: string, excludeUserId?: string) {
+  async listNeighbours(area: string, excludeUserId?: string) {
+    const blockedIds = excludeUserId ? await this.blocks.blockedUserIds(excludeUserId) : [];
     return this.prisma.user.findMany({
       where: {
         area: { equals: area, mode: 'insensitive' },
-        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+        ...(excludeUserId ? { id: { notIn: [excludeUserId, ...blockedIds] } } : {}),
       },
       select: { id: true, name: true, phone: true, area: true, avatarUrl: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  updateNotificationSettings(
+    userId: string,
+    data: {
+      activityNotificationsEnabled?: boolean;
+      hideLikeCounts?: boolean;
+      allowMessagesFrom?: MessagePrivacy;
+    },
+  ) {
+    return this.prisma.user.update({ where: { id: userId }, data });
+  }
+
+  updateProfessionalProfile(
+    userId: string,
+    data: { headline?: string; skills?: string[]; availableFor?: string[] },
+  ) {
+    return this.prisma.user.update({ where: { id: userId }, data });
   }
 
   updateFcmToken(userId: string, token: string) {
@@ -166,5 +208,29 @@ export class UsersService {
 
   updateAvatar(userId: string, avatarUrl: string) {
     return this.prisma.user.update({ where: { id: userId }, data: { avatarUrl } });
+  }
+
+  /** Self-service account deletion - required by Play Store policy for any
+   * app that allows account creation. Removes the Firebase phone-auth
+   * identity too (best-effort - a lookup/delete failure there shouldn't
+   * block the user from deleting their own app data), then deletes the
+   * Prisma User row, which cascades to every owned relation across the
+   * schema (posts, messages, wallet, memberships, etc. all have
+   * onDelete: Cascade back to User). */
+  async deleteOwnAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (this.firebaseApp) {
+      try {
+        const firebaseUser = await getAuth(this.firebaseApp).getUserByPhoneNumber(user.phone);
+        await getAuth(this.firebaseApp).deleteUser(firebaseUser.uid);
+      } catch (err) {
+        this.logger.warn(`Firebase account cleanup failed for user ${userId}: ${err}`);
+      }
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { success: true };
   }
 }

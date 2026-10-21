@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/media_upload_service.dart';
+import '../../core/session/session_controller.dart';
+import '../../models/area_post.dart';
+import '../area/area_repository.dart';
 import 'reels_repository.dart';
 
 class CreateReelScreen extends ConsumerStatefulWidget {
@@ -19,6 +22,39 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
   VideoPlayerController? _videoController;
   bool _loading = false;
   String? _error;
+  AreaPost? _linkedPost;
+
+  Future<void> _pickShopPost() async {
+    final area = ref.read(sessionControllerProvider).value?.user?.area;
+    if (area == null) return;
+    try {
+      final shopPosts = await ref
+          .read(areaRepositoryProvider)
+          .list(area, kind: AreaPostKind.shop, mine: true);
+      if (!mounted) return;
+      if (shopPosts.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You don't have any Shop posts to link yet.")),
+        );
+        return;
+      }
+      final selected = await showModalBottomSheet<AreaPost>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: shopPosts
+                .map((p) => ListTile(title: Text(p.title), onTap: () => Navigator.of(context).pop(p)))
+                .toList(),
+          ),
+        ),
+      );
+      if (selected != null) setState(() => _linkedPost = selected);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
 
   Future<void> _pickVideo() async {
     final picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
@@ -45,10 +81,11 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
       _error = null;
     });
     try {
-      final videoUrl = await MediaUploadService().uploadVideo(_video!);
+      final videoUrl = await ref.read(mediaUploadServiceProvider).uploadVideo(_video!);
       await ref.read(reelsRepositoryProvider).create(
             videoUrl: videoUrl,
             caption: _captionController.text.trim(),
+            linkedAreaPostId: _linkedPost?.id,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -108,6 +145,14 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _pickShopPost,
+              icon: const Icon(Icons.storefront),
+              label: Text(
+                _linkedPost != null ? 'Shopping: ${_linkedPost!.title}' : 'Link a shop post (optional)',
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),

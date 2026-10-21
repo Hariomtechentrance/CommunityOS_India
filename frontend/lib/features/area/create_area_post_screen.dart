@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/media_upload_service.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/widgets/dictation_button.dart';
 import '../../models/area_post.dart';
 import 'area_post_kind_ui.dart';
 import 'area_repository.dart';
@@ -56,7 +57,7 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
   }
 
   Future<void> _pickImages() async {
-    final picked = await ImagePicker().pickMultiImage(limit: 5);
+    final picked = await ImagePicker().pickMultiImage(limit: 5, imageQuality: 85, maxWidth: 1600);
     if (picked.isEmpty) return;
     setState(() {
       _images
@@ -120,7 +121,7 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
       _error = null;
     });
     try {
-      final upload = MediaUploadService();
+      final upload = ref.read(mediaUploadServiceProvider);
       List<String>? imageUrls;
       if (_images.isNotEmpty) {
         imageUrls = await upload.uploadAll(_images);
@@ -214,18 +215,20 @@ class _CreateAreaPostScreenState extends ConsumerState<CreateAreaPostScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Title',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: DictationButton(controller: _titleController),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _descriptionController,
                   maxLines: 4,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Details',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: DictationButton(controller: _descriptionController),
                   ),
                 ),
                 const SizedBox(height: 12),

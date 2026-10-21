@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AreaPostKind } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AreaService } from './area.service';
 import { CreateAreaPostCommentDto } from './dto/create-area-post-comment.dto';
 import { CreateAreaPostDto } from './dto/create-area-post.dto';
+import { ReactToAreaPostDto } from './dto/react-to-area-post.dto';
 
 @ApiTags('area')
 @ApiBearerAuth()
@@ -27,6 +28,11 @@ export class AreaPostsController {
     @CurrentUser() user: { userId: string },
   ) {
     return this.area.listForArea(area, kind, user.userId, mine === 'true');
+  }
+
+  @Get('for-you')
+  forYou(@Query('area') area: string, @CurrentUser() user: { userId: string }) {
+    return this.area.listForYou(area, user.userId);
   }
 
   // Must be registered before ':id' so these aren't swallowed as an :id param.
@@ -70,6 +76,25 @@ export class AreaPostsController {
   @Post(':id/save')
   toggleSave(@Param('id') id: string, @CurrentUser() user: { userId: string }) {
     return this.area.toggleSave(id, user.userId);
+  }
+
+  @Post(':id/react')
+  react(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string },
+    @Body() dto: ReactToAreaPostDto,
+  ) {
+    return this.area.react(id, user.userId, dto.emoji);
+  }
+
+  @Delete(':id/react')
+  removeReaction(@Param('id') id: string, @CurrentUser() user: { userId: string }) {
+    return this.area.removeReaction(id, user.userId);
+  }
+
+  @Get(':id/reactions')
+  listReactors(@Param('id') id: string, @Query('emoji') emoji?: string) {
+    return this.area.listReactors(id, emoji);
   }
 
   @Get(':id/comments')

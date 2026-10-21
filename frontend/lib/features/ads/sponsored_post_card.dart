@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/campaign.dart';
@@ -60,8 +61,8 @@ class SponsoredPostCard extends StatelessWidget {
               if (campaign.imageUrl != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    campaign.imageUrl!,
+                  child: CachedNetworkImage(
+                    imageUrl: campaign.imageUrl!,
                     width: double.infinity,
                     height: 160,
                     fit: BoxFit.cover,

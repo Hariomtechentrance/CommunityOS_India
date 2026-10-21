@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -8,6 +8,8 @@ import { RecordLocationVisitDto } from './dto/record-location-visit.dto';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
+import { UpdateProfessionalProfileDto } from './dto/update-professional-profile.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
@@ -21,6 +23,11 @@ export class UsersController {
   async me(@CurrentUser() user: { userId: string }) {
     const found = await this.users.findById(user.userId);
     return found ? sanitizeUser(found) : found;
+  }
+
+  @Delete()
+  deleteAccount(@CurrentUser() user: { userId: string }) {
+    return this.users.deleteOwnAccount(user.userId);
   }
 
   @Patch('location')
@@ -59,5 +66,21 @@ export class UsersController {
   @Patch('avatar')
   updateAvatar(@CurrentUser() user: { userId: string }, @Body() dto: UpdateAvatarDto) {
     return this.users.updateAvatar(user.userId, dto.avatarUrl);
+  }
+
+  @Patch('notification-settings')
+  updateNotificationSettings(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: UpdateNotificationSettingsDto,
+  ) {
+    return this.users.updateNotificationSettings(user.userId, dto);
+  }
+
+  @Patch('professional-profile')
+  updateProfessionalProfile(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: UpdateProfessionalProfileDto,
+  ) {
+    return this.users.updateProfessionalProfile(user.userId, dto);
   }
 }

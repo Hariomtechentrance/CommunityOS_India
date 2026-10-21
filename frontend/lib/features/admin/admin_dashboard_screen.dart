@@ -89,6 +89,42 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             onTap: () => context.push('/admin/users'),
                           ),
                         ),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.monitor_heart_outlined),
+                            title: const Text('Feature health'),
+                            subtitle: const Text('Which features are working vs. erroring'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.push('/admin/feature-health'),
+                          ),
+                        ),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.bug_report_outlined),
+                            title: const Text('Server errors'),
+                            subtitle: const Text('Recent 5xx errors across the backend'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.push('/admin/errors'),
+                          ),
+                        ),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.feedback_outlined),
+                            title: const Text('Feedback & reviews'),
+                            subtitle: const Text('Bug reports, suggestions, and reviews from users'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.push('/admin/feedback'),
+                          ),
+                        ),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.account_balance_outlined),
+                            title: const Text('Payout requests'),
+                            subtitle: const Text('Review and pay out creator earnings'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.push('/admin/payouts'),
+                          ),
+                        ),
                       ],
                     ),
         ),

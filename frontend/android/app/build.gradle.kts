@@ -54,6 +54,19 @@ android {
                 // (e.g. a fresh checkout before running the keystore setup step).
                 signingConfigs.getByName("debug")
             }
+            // Was previously off entirely, shipping every release build
+            // unobfuscated and unshrunk. proguard-rules.pro keeps the
+            // Firebase/WebRTC/Maps/socket.io native bridges this app
+            // actually depends on - MUST be verified against a real release
+            // build (calling, push notifications, maps, location) before
+            // the next Play Store upload, since R8 can break a native
+            // plugin bridge silently if a keep rule is missing.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

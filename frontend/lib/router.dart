@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import 'core/session/session_controller.dart';
 import 'features/admin/admin_dashboard_screen.dart';
+import 'features/admin/admin_errors_screen.dart';
+import 'features/admin/admin_feature_health_screen.dart';
+import 'features/admin/admin_feedback_screen.dart';
+import 'features/admin/admin_payouts_screen.dart';
 import 'features/admin/admin_login_screen.dart';
 import 'features/admin/admin_user_detail_screen.dart';
 import 'features/admin/admin_users_list_screen.dart';
@@ -12,15 +16,26 @@ import 'features/area/area_post_detail_screen.dart';
 import 'features/area/area_profile_screen.dart';
 import 'features/area/saved_posts_screen.dart';
 import 'features/auth/demo_user_switcher_screen.dart';
+import 'features/blocks/blocked_accounts_screen.dart';
 import 'features/auth/otp_request_screen.dart';
 import 'features/auth/otp_verify_screen.dart';
 import 'features/auth/phone_verification.dart';
 import 'features/community/community_home_screen.dart';
+import 'features/ai/community_assistant_screen.dart';
+import 'features/connect/connect_screen.dart';
 import 'features/community/event_detail_screen.dart';
 import 'features/community/post_detail_screen.dart';
 import 'features/complaints/complaints_list_screen.dart';
 import 'features/emergency/emergency_sos_screen.dart';
+import 'features/events/events_map_screen.dart';
 import 'features/explore/explore_map_screen.dart';
+import 'features/feedback/send_feedback_screen.dart';
+import 'features/goals/goal_communities_list_screen.dart';
+import 'features/goals/goal_community_detail_screen.dart';
+import 'features/jobs/create_job_screen.dart';
+import 'features/jobs/job_detail_screen.dart';
+import 'features/jobs/jobs_list_screen.dart';
+import 'features/jobs/my_applications_screen.dart';
 import 'features/home/home_map_screen.dart';
 import 'features/home/home_shell_screen.dart';
 import 'features/home/society_home_screen.dart';
@@ -32,8 +47,15 @@ import 'features/membership/manage_members_screen.dart';
 import 'features/membership/pending_approval_screen.dart';
 import 'features/messages/chat_list_screen.dart';
 import 'features/messages/chat_screen.dart';
+import 'features/mutes/muted_accounts_screen.dart';
 import 'features/notices/notices_list_screen.dart';
 import 'features/onboarding/location_setup_screen.dart';
+import 'features/projects/create_project_screen.dart';
+import 'features/projects/project_detail_screen.dart';
+import 'features/search/search_screen.dart';
+import 'features/settings/settings_screen.dart';
+import 'features/wallet/payout_screen.dart';
+import 'features/wallet/wallet_screen.dart';
 import 'features/societies/create_society_screen.dart';
 import 'features/societies/society_search_screen.dart';
 import 'features/users/follow_list_screen.dart';
@@ -213,6 +235,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          GoRoute(
+            path: 'feature-health',
+            builder: (context, state) => const AdminFeatureHealthScreen(),
+          ),
+          GoRoute(path: 'errors', builder: (context, state) => const AdminErrorsScreen()),
+          GoRoute(path: 'feedback', builder: (context, state) => const AdminFeedbackScreen()),
+          GoRoute(path: 'payouts', builder: (context, state) => const AdminPayoutsScreen()),
         ],
       ),
       GoRoute(
@@ -221,9 +250,71 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'map', builder: (context, state) => const HomeMapScreen()),
           GoRoute(path: 'explore-map', builder: (context, state) => const ExploreMapScreen()),
+          GoRoute(path: 'events-map', builder: (context, state) => const EventsMapScreen()),
+          GoRoute(path: 'connect', builder: (context, state) => const ConnectScreen()),
           GoRoute(path: 'saved', builder: (context, state) => const SavedPostsScreen()),
+          GoRoute(path: 'feedback', builder: (context, state) => const SendFeedbackScreen()),
           GoRoute(path: 'search-people', builder: (context, state) => const UserSearchScreen()),
+          GoRoute(path: 'search', builder: (context, state) => const SearchScreen()),
+          GoRoute(
+            path: 'projects/new',
+            builder: (context, state) => const CreateProjectScreen(),
+          ),
+          GoRoute(
+            path: 'projects/:projectId',
+            builder: (context, state) =>
+                ProjectDetailScreen(projectId: state.pathParameters['projectId']!),
+          ),
           GoRoute(path: 'ads/mine', builder: (context, state) => const MyCampaignsScreen()),
+          GoRoute(
+            path: 'wallet',
+            builder: (context, state) => const WalletScreen(),
+            routes: [
+              GoRoute(path: 'payout', builder: (context, state) => const PayoutScreen()),
+            ],
+          ),
+          GoRoute(
+            path: 'goals',
+            builder: (context, state) => const GoalCommunitiesListScreen(),
+            routes: [
+              GoRoute(
+                path: ':goalCommunityId',
+                builder: (context, state) => GoalCommunityDetailScreen(
+                  goalCommunityId: state.pathParameters['goalCommunityId']!,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'jobs',
+            builder: (context, state) => const JobsListScreen(),
+            routes: [
+              GoRoute(path: 'new', builder: (context, state) => const CreateJobScreen()),
+              GoRoute(
+                path: 'my-applications',
+                builder: (context, state) => const MyApplicationsScreen(),
+              ),
+              GoRoute(
+                path: ':jobId',
+                builder: (context, state) =>
+                    JobDetailScreen(jobId: state.pathParameters['jobId']!),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'blocked',
+                builder: (context, state) => const BlockedAccountsScreen(),
+              ),
+              GoRoute(
+                path: 'muted',
+                builder: (context, state) => const MutedAccountsScreen(),
+              ),
+            ],
+          ),
           GoRoute(
             path: 'emergency/new',
             builder: (context, state) => const EmergencySosScreen(),
@@ -294,6 +385,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'events/:eventId',
                     builder: (context, state) =>
                         EventDetailScreen(eventId: state.pathParameters['eventId']!),
+                  ),
+                  GoRoute(
+                    path: 'ask',
+                    builder: (context, state) =>
+                        CommunityAssistantScreen(societyId: state.extra as String),
                   ),
                 ],
               ),

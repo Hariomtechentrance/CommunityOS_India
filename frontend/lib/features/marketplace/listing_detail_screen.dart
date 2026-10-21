@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
@@ -82,10 +83,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                   .map(
                                     (url) => ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        url,
+                                      child: CachedNetworkImage(
+                                        imageUrl: url,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => const ColoredBox(
+                                        errorWidget: (_, _, _) => const ColoredBox(
                                           color: Color(0xFFEEEEEE),
                                           child: Icon(Icons.image_not_supported),
                                         ),

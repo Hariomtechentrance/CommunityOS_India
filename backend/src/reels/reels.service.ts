@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { AreaPostKind } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReelDto } from './dto/create-reel.dto';
 
@@ -9,14 +10,34 @@ const REEL_AUTHOR_SELECT = {
   avatarUrl: true,
 } as const;
 
+const LINKED_POST_SELECT = {
+  id: true,
+  title: true,
+  imageUrls: true,
+  offerText: true,
+} as const;
+
 @Injectable()
 export class ReelsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(userId: string, dto: CreateReelDto) {
+  async create(userId: string, dto: CreateReelDto) {
+    if (dto.linkedAreaPostId) {
+      const post = await this.prisma.areaPost.findUnique({
+        where: { id: dto.linkedAreaPostId },
+      });
+      if (!post || post.userId !== userId || post.kind !== AreaPostKind.SHOP) {
+        throw new ForbiddenException('linkedAreaPostId must be your own SHOP post');
+      }
+    }
     return this.prisma.reel.create({
-      data: { userId, videoUrl: dto.videoUrl, caption: dto.caption },
-      include: { user: { select: REEL_AUTHOR_SELECT } },
+      data: {
+        userId,
+        videoUrl: dto.videoUrl,
+        caption: dto.caption,
+        linkedAreaPostId: dto.linkedAreaPostId,
+      },
+      include: { user: { select: REEL_AUTHOR_SELECT }, linkedPost: { select: LINKED_POST_SELECT } },
     });
   }
 
@@ -25,6 +46,7 @@ export class ReelsService {
       this.prisma.reel.findMany({
         include: {
           user: { select: REEL_AUTHOR_SELECT },
+          linkedPost: { select: LINKED_POST_SELECT },
           _count: { select: { likes: true, comments: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -65,6 +87,18 @@ export class ReelsService {
     }
     await this.prisma.reelLike.create({ data: { reelId, userId } });
     return { liked: true };
+  }
+
+  /** Public, like Instagram's "liked by" list - unlike AreaPostInterest's
+   * owner-only viewer list, which gates on real-world contact info (who can
+   * help, who to call) rather than on social engagement. */
+  async listLikers(reelId: string) {
+    const likes = await this.prisma.reelLike.findMany({
+      where: { reelId },
+      select: { user: { select: REEL_AUTHOR_SELECT }, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return likes.map((l) => l.user);
   }
 
   listComments(reelId: string) {

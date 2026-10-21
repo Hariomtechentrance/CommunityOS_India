@@ -11,4 +11,9 @@ export class CreateReelDto {
   @IsString()
   @MaxLength(500)
   caption?: string;
+
+  @ApiPropertyOptional({ description: 'Your own SHOP-kind AreaPost to "shop this reel" to' })
+  @IsOptional()
+  @IsString()
+  linkedAreaPostId?: string;
 }

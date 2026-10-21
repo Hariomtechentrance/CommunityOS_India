@@ -56,6 +56,58 @@ class AdminRepository {
   Future<void> deleteUser(String userId) {
     return _client.dio.delete('/admin/users/$userId');
   }
+
+  Future<List<FeatureHealth>> getFeatureHealth() async {
+    final res = await _client.dio.get('/admin/feature-health');
+    return (res.data as List)
+        .map((e) => FeatureHealth.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<AdminErrorLogPage> listErrors({String? path, int page = 1}) async {
+    final res = await _client.dio.get(
+      '/admin/errors',
+      queryParameters: {
+        if (path != null && path.isNotEmpty) 'path': path,
+        'page': page,
+      },
+    );
+    return AdminErrorLogPage.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<AdminFeedbackPage> listFeedback({String? category, String? status, int page = 1}) async {
+    final res = await _client.dio.get(
+      '/admin/feedback',
+      queryParameters: {
+        'category': ?category,
+        'status': ?status,
+        'page': page,
+      },
+    );
+    return AdminFeedbackPage.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> setFeedbackStatus(String id, String status) {
+    return _client.dio.patch('/admin/feedback/$id/status', data: {'status': status});
+  }
+
+  Future<AdminPayoutPage> listPayouts({String? status, int page = 1}) async {
+    final res = await _client.dio.get(
+      '/admin/payouts',
+      queryParameters: {
+        if (status != null) 'status': status,
+        'page': page,
+      },
+    );
+    return AdminPayoutPage.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> setPayoutStatus(String id, String status, {String? adminNote}) {
+    return _client.dio.patch('/admin/payouts/$id/status', data: {
+      'status': status,
+      if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
+    });
+  }
 }
 
 final adminRepositoryProvider = Provider<AdminRepository>(

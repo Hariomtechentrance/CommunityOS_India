@@ -14,6 +14,14 @@ class AppUser {
   final bool verified;
   final bool isSuperAdmin;
   final bool isSuspended;
+  final bool activityNotificationsEnabled;
+  final bool hideLikeCounts;
+  final String allowMessagesFrom;
+  final String? headline;
+  final List<String> skills;
+  final List<String> availableFor;
+  final List<String> interests;
+  final bool connectEnabled;
   final DateTime? lastLoginAt;
   final DateTime? createdAt;
 
@@ -33,6 +41,14 @@ class AppUser {
     this.verified = false,
     this.isSuperAdmin = false,
     this.isSuspended = false,
+    this.activityNotificationsEnabled = true,
+    this.hideLikeCounts = false,
+    this.allowMessagesFrom = 'EVERYONE',
+    this.headline,
+    this.skills = const [],
+    this.availableFor = const [],
+    this.interests = const [],
+    this.connectEnabled = false,
     this.lastLoginAt,
     this.createdAt,
   });
@@ -56,6 +72,14 @@ class AppUser {
         verified: json['verified'] as bool? ?? false,
         isSuperAdmin: json['isSuperAdmin'] as bool? ?? false,
         isSuspended: json['isSuspended'] as bool? ?? false,
+        activityNotificationsEnabled: json['activityNotificationsEnabled'] as bool? ?? true,
+        hideLikeCounts: json['hideLikeCounts'] as bool? ?? false,
+        allowMessagesFrom: json['allowMessagesFrom'] as String? ?? 'EVERYONE',
+        headline: json['headline'] as String?,
+        skills: (json['skills'] as List?)?.cast<String>() ?? const [],
+        availableFor: (json['availableFor'] as List?)?.cast<String>() ?? const [],
+        interests: (json['interests'] as List?)?.cast<String>() ?? const [],
+        connectEnabled: json['connectEnabled'] as bool? ?? false,
         lastLoginAt: json['lastLoginAt'] != null
             ? DateTime.tryParse(json['lastLoginAt'] as String)
             : null,
@@ -78,6 +102,7 @@ class AppUser {
         'longitude': longitude,
         'isSuperAdmin': isSuperAdmin,
         'isSuspended': isSuspended,
+        'activityNotificationsEnabled': activityNotificationsEnabled,
         'lastLoginAt': lastLoginAt?.toIso8601String(),
       };
 }

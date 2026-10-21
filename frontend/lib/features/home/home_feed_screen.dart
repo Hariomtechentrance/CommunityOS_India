@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/relative_time.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/widgets/ai_generated_badge.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../models/area_post.dart';
 import '../../models/campaign.dart';
@@ -39,6 +41,7 @@ class HomeFeedScreen extends ConsumerStatefulWidget {
 class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   AreaPostKind? _filter;
   bool _loading = true;
+  bool _forYou = false;
   String? _error;
   List<AreaPost> _posts = [];
   List<Campaign> _campaigns = [];
@@ -61,7 +64,9 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
       _error = null;
     });
     try {
-      final posts = await ref.read(areaRepositoryProvider).list(user!.area!, kind: _filter);
+      final posts = _forYou
+          ? await ref.read(areaRepositoryProvider).forYou(user!.area!)
+          : await ref.read(areaRepositoryProvider).list(user!.area!, kind: _filter);
       setState(() => _posts = posts);
       // Sponsored posts are a nice-to-have overlay on the real feed - never
       // let an ads outage block the feed itself from loading.
@@ -114,6 +119,11 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         title: Text(user?.area ?? 'NIKAT'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search everything',
+            onPressed: () => context.push('/home/search'),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_search_outlined),
             tooltip: 'Find people',
             onPressed: () => context.push('/home/search-people'),
@@ -162,6 +172,46 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   context.push('/home/society');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.local_fire_department_outlined),
+                title: const Text('Goal communities'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/goals');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: const Text('Events around you'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/events-map');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.work_outline),
+                title: const Text('Jobs'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/jobs');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shuffle),
+                title: const Text('Niikat Connect'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/connect');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/settings');
                 },
               ),
               const Spacer(),
@@ -239,6 +289,24 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
             ),
           ),
           Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Latest'), icon: Icon(Icons.schedule)),
+                ButtonSegment(
+                  value: true,
+                  label: Text('For You'),
+                  icon: Icon(Icons.auto_awesome),
+                ),
+              ],
+              selected: {_forYou},
+              onSelectionChanged: (selection) {
+                setState(() => _forYou = selection.first);
+                _load();
+              },
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -247,10 +315,12 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                   ChoiceChip(
                     label: const Text('All'),
                     selected: _filter == null,
-                    onSelected: (_) {
-                      setState(() => _filter = null);
-                      _load();
-                    },
+                    onSelected: _forYou
+                        ? null
+                        : (_) {
+                            setState(() => _filter = null);
+                            _load();
+                          },
                   ),
                   const SizedBox(width: 8),
                   ...allAreaPostKinds.map(
@@ -260,10 +330,12 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                         avatar: Icon(areaPostKindIcon(kind), size: 18),
                         label: Text(areaPostKindLabel(kind)),
                         selected: _filter == kind,
-                        onSelected: (_) {
-                          setState(() => _filter = kind);
-                          _load();
-                        },
+                        onSelected: _forYou
+                            ? null
+                            : (_) {
+                                setState(() => _filter = kind);
+                                _load();
+                              },
                       ),
                     ),
                   ),
@@ -439,6 +511,10 @@ class _PostCard extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               Text(post.title, style: Theme.of(context).textTheme.titleMedium),
+              if (post.aiGenerated == true) ...[
+                const SizedBox(height: 4),
+                AiGeneratedBadge(confidence: post.aiGeneratedConfidence),
+              ],
               const SizedBox(height: 4),
               Text(
                 post.description,
@@ -477,10 +553,10 @@ class _PostCard extends ConsumerWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(
-                          hasImage ? post.imageUrls.first : _videoThumbnailUrl(post.videoUrl!),
+                        CachedNetworkImage(
+                          imageUrl: hasImage ? post.imageUrls.first : _videoThumbnailUrl(post.videoUrl!),
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => ColoredBox(
+                          errorWidget: (_, _, _) => ColoredBox(
                             color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             child: const Icon(Icons.image, size: 40),
                           ),

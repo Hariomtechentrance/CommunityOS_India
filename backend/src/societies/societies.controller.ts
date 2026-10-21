@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SocietyType } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateSocietyDto } from './dto/create-society.dto';
@@ -18,8 +19,12 @@ export class SocietiesController {
   }
 
   @Get()
-  search(@Query('q') q?: string, @Query('pincode') pincode?: string) {
-    return this.societies.search(q, pincode);
+  search(
+    @Query('q') q?: string,
+    @Query('pincode') pincode?: string,
+    @Query('type') type?: SocietyType,
+  ) {
+    return this.societies.search(q, pincode, type);
   }
 
   @Get(':societyId')

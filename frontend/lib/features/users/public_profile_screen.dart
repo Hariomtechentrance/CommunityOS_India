@@ -8,9 +8,15 @@ import '../../core/widgets/max_width_box.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/follow.dart';
 import '../../models/user.dart';
+import '../blocks/blocks_repository.dart';
 import '../calls/call_service.dart';
 import '../follows/follows_repository.dart';
+import '../mutes/mutes_repository.dart';
+import '../projects/professional_profile_section.dart';
+import '../reports/report_sheet.dart';
+import '../reputation/reputation_badges.dart';
 import '../users/user_repository.dart';
+import '../wallet/wallet_repository.dart';
 
 /// Another user's profile - reachable from anywhere their name/avatar is
 /// tappable (post authors, neighbours, followers/following lists). Shows
@@ -78,10 +84,133 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     }
   }
 
+  Future<void> _confirmBlock() async {
+    final name = _user?.name ?? 'this person';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block this account?'),
+        content: Text(
+          "$name won't be able to message you or see your posts, and you won't see theirs.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _acting = true);
+    try {
+      await ref.read(blocksRepositoryProvider).block(widget.userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Blocked $name.')));
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _mute() async {
+    final name = _user?.name ?? 'this person';
+    try {
+      await ref.read(mutesRepositoryProvider).mute(widget.userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Muted $name. You won't see their posts in your feed.")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
+  Future<void> _showGiftSheet(String toUserId, String? toUserName) async {
+    final amountController = TextEditingController(text: '50');
+    final amount = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Gift coins to ${toUserName ?? 'this person'}',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount (🪙)'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(amountController.text.trim());
+                Navigator.of(context).pop(value);
+              },
+              child: const Text('Send'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (amount == null || amount <= 0 || !mounted) return;
+
+    try {
+      await ref.read(walletRepositoryProvider).gift(toUserId, amount);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sent $amount coins to ${toUserName ?? 'them'}.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_user?.name ?? 'Profile')),
+      appBar: AppBar(
+        title: Text(_user?.name ?? 'Profile'),
+        actions: [
+          if (!_loading && !_isSelf)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'mute':
+                    _mute();
+                  case 'report':
+                    showReportSheet(context, ref, userId: widget.userId);
+                  case 'block':
+                    _confirmBlock();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'mute', child: Text('Mute')),
+                PopupMenuItem(value: 'report', child: Text('Report')),
+                PopupMenuItem(value: 'block', child: Text('Block')),
+              ],
+            ),
+        ],
+      ),
       body: MaxWidthBox(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -135,7 +264,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        ReputationBadges(userId: widget.userId),
+        const SizedBox(height: 8),
         if (!_isSelf)
           Row(
             children: [
@@ -167,8 +298,15 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 onPressed:
                     callService == null ? null : () => callService.call(user.id, myName),
               ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                icon: const Text('🪙'),
+                tooltip: 'Gift coins',
+                onPressed: () => _showGiftSheet(user.id, user.name),
+              ),
             ],
           ),
+        ProfessionalProfileSection(user: user, isSelf: _isSelf),
       ],
     );
   }
