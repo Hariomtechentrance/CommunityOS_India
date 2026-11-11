@@ -6,9 +6,11 @@ import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/max_width_box.dart';
 import '../../core/widgets/user_avatar.dart';
+import '../../models/business.dart';
 import '../../models/follow.dart';
 import '../../models/user.dart';
 import '../blocks/blocks_repository.dart';
+import '../business/business_repository.dart';
 import '../calls/call_service.dart';
 import '../follows/follows_repository.dart';
 import '../mutes/mutes_repository.dart';
@@ -38,6 +40,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   String? _error;
   AppUser? _user;
   FollowStats? _stats;
+  BusinessProfile? _business;
 
   bool get _isSelf =>
       widget.userId == ref.read(sessionControllerProvider).value?.user?.id;
@@ -62,6 +65,14 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         _user = results[0] as AppUser;
         _stats = results[1] as FollowStats;
       });
+      // Best-effort - most users aren't a business, a 404 here just means no
+      // storefront card shows, not a page-load failure.
+      try {
+        _business = await ref.read(businessRepositoryProvider).getPublicProfile(widget.userId);
+      } catch (_) {
+        _business = null;
+      }
+      if (mounted) setState(() {});
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -266,6 +277,18 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         ),
         const SizedBox(height: 16),
         ReputationBadges(userId: widget.userId),
+        if (_business != null) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.storefront, color: nikatOrange),
+              title: Text(_business!.businessName),
+              subtitle: Text(_business!.category),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/home/business/view/${widget.userId}'),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         if (!_isSelf)
           Row(

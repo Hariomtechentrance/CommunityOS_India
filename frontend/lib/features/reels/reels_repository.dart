@@ -43,7 +43,7 @@ class ReelsRepository {
       data: {
         'videoUrl': videoUrl,
         if (caption != null && caption.isNotEmpty) 'caption': caption,
-        if (linkedAreaPostId != null) 'linkedAreaPostId': linkedAreaPostId,
+        'linkedAreaPostId': ?linkedAreaPostId,
       },
     );
     return Reel.fromJson(res.data as Map<String, dynamic>);

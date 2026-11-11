@@ -40,6 +40,7 @@ import { StoriesModule } from './stories/stories.module';
 import { TurnModule } from './turn/turn.module';
 import { ReelsModule } from './reels/reels.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { BusinessModule } from './business/business.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { CampaignsModule } from './campaigns/campaigns.module';
     MediaModule,
     FeedbackModule,
     JobsModule,
+    BusinessModule,
     SocietiesModule,
     MembershipsModule,
     NoticesModule,

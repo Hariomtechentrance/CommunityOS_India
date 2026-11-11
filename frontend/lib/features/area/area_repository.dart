@@ -146,7 +146,7 @@ class AreaRepository {
   Future<List<AppUser>> listReactors(String areaPostId, {String? emoji}) async {
     final res = await _client.dio.get(
       '/area-posts/$areaPostId/reactions',
-      queryParameters: {if (emoji != null) 'emoji': emoji},
+      queryParameters: {'emoji': ?emoji},
     );
     return (res.data as List).map((e) => AppUser.fromJson(e as Map<String, dynamic>)).toList();
   }

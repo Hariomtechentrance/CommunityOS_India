@@ -25,8 +25,8 @@ class ConnectRepository {
 
   Future<void> updateSettings({bool? connectEnabled, List<String>? interests}) async {
     await _client.dio.patch('/connect/settings', data: {
-      if (connectEnabled != null) 'connectEnabled': connectEnabled,
-      if (interests != null) 'interests': interests,
+      'connectEnabled': ?connectEnabled,
+      'interests': ?interests,
     });
   }
 

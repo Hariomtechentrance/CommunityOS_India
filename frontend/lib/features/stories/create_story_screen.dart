@@ -25,6 +25,10 @@ class CreateStoryScreen extends ConsumerStatefulWidget {
   ConsumerState<CreateStoryScreen> createState() => _CreateStoryScreenState();
 }
 
+// A story is meant to be a quick update, not a short film - also keeps
+// upload size (and Cloudinary storage/bandwidth cost) bounded.
+const _maxStoryVideoDuration = Duration(seconds: 60);
+
 class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   XFile? _image;
   XFile? _video;
@@ -63,6 +67,17 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
     _videoController?.dispose();
     final controller = VideoPlayerController.networkUrl(Uri.parse(picked.path));
     await controller.initialize();
+
+    if (controller.value.duration > _maxStoryVideoDuration) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() {
+        _error = 'Story videos are limited to ${_maxStoryVideoDuration.inSeconds} seconds.';
+        _videoController = null;
+      });
+      return;
+    }
+
     await controller.setLooping(true);
     await controller.play();
     if (!mounted) return;
@@ -72,6 +87,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _videoController = controller;
       _audioPath = null;
       _stickeredBytes = null;
+      _error = null;
     });
   }
 

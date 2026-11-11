@@ -168,6 +168,7 @@ model User {
   reelComments      ReelComment[]
   campaigns         Campaign[]
   locationVisits    LocationVisit[]
+  businessProfile   BusinessProfile?
 
   @@index([area])
 }
@@ -1103,4 +1104,64 @@ model JobApplication {
   applicant User       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, applicantId])
+}
+
+// --- B2B suite: a verified business profile sits on top of a normal User
+// (same account, not a separate signup flow) - the follow graph, messaging,
+// block/report and area-post infra all already work for businesses as-is,
+// this just adds the storefront layer Meta's WhatsApp Business price hikes
+// are pushing SMBs to look for alternatives to.
+model BusinessProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  businessName  String
+  category      String
+  description   String?
+  logoUrl       String?
+  coverImageUrl String?
+  website       String?
+  isVerified    Boolean  @default(false)
+  profileViews  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItems BusinessCatalogItem[]
+  broadcasts   BusinessBroadcast[]
+
+  @@index([category])
+}
+
+model BusinessCatalogItem {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String?
+  price       Float?
+  imageUrls   String[] @default([])
+  inStock     Boolean  @default(true)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business BusinessProfile @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+// One push/feed notification fan-out to every follower of the business -
+// reuses FollowsService.notifyFollowers (the same fan-out Area posts use),
+// so blocked/muted/opted-out followers are already excluded for free.
+model BusinessBroadcast {
+  id             String   @id @default(cuid())
+  businessId     String
+  title          String
+  body           String
+  imageUrl       String?
+  recipientCount Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  business BusinessProfile @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
 }

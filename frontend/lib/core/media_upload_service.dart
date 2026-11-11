@@ -54,7 +54,24 @@ class MediaUploadService {
   }
 
   Future<String> uploadVideo(XFile file) async {
-    return _upload(await file.readAsBytes(), file.name, 'video');
+    final url = await _upload(await file.readAsBytes(), file.name, 'video');
+    return _optimizedVideoUrl(url);
+  }
+
+  /// Rewrites the raw Cloudinary delivery URL to request an auto-compressed,
+  /// resolution-capped version instead of the original upload - a phone-shot
+  /// reel can be 50-100MB+ raw; serving that to every viewer on every replay
+  /// would blow through Cloudinary's bandwidth/storage credits fast as reel
+  /// adoption grows. This is a pure URL rewrite (Cloudinary transforms and
+  /// CDN-caches the result on first request) - no re-upload, no backend
+  /// signing change, and the original asset is untouched if ever needed.
+  String _optimizedVideoUrl(String secureUrl) {
+    const transform = 'q_auto,vc_auto,w_720,h_1280,c_limit';
+    final marker = '/upload/';
+    final i = secureUrl.indexOf(marker);
+    if (i == -1) return secureUrl;
+    final insertAt = i + marker.length;
+    return '${secureUrl.substring(0, insertAt)}$transform/${secureUrl.substring(insertAt)}';
   }
 
   Future<String> uploadAudio(List<int> bytes, String filename) async {

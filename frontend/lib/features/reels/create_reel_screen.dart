@@ -16,6 +16,10 @@ class CreateReelScreen extends ConsumerStatefulWidget {
   ConsumerState<CreateReelScreen> createState() => _CreateReelScreenState();
 }
 
+// Matches Instagram Reels' cap - keeps upload size (and your Cloudinary
+// storage/bandwidth bill) bounded without a hard block on "normal" clips.
+const _maxReelDuration = Duration(seconds: 90);
+
 class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
   final _captionController = TextEditingController();
   XFile? _video;
@@ -62,12 +66,28 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
     _videoController?.dispose();
     final controller = VideoPlayerController.networkUrl(Uri.parse(picked.path));
     await controller.initialize();
+
+    // ImagePicker's maxDuration only limits camera recording, not gallery
+    // picks - this is the only enforcement point for an already-recorded
+    // clip someone selects from their gallery.
+    if (controller.value.duration > _maxReelDuration) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() {
+        _error = 'Reels are limited to ${_maxReelDuration.inSeconds} seconds. Pick a shorter clip.';
+        _video = null;
+        _videoController = null;
+      });
+      return;
+    }
+
     controller.setLooping(true);
     controller.play();
     if (!mounted) return;
     setState(() {
       _video = picked;
       _videoController = controller;
+      _error = null;
     });
   }
 

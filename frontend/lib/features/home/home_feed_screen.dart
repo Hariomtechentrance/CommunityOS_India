@@ -207,6 +207,14 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.storefront_outlined),
+                title: const Text('Niikat Business'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/home/business');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),
                 onTap: () {

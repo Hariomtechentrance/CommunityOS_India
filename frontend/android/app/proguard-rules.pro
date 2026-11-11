@@ -39,3 +39,9 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# Flutter's engine defensively references Play Core's deferred-components
+# (dynamic feature module) classes even though this app doesn't use that
+# feature - the artifact that provided them isn't on the classpath, so R8
+# can't resolve them. Safe to silence: nothing here is reachable at runtime.
+-dontwarn com.google.android.play.core.**

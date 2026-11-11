@@ -29,7 +29,7 @@ class FeedbackRepository {
     await _client.dio.post('/feedback', data: {
       'category': category.apiValue,
       'message': message,
-      if (rating != null) 'rating': rating,
+      'rating': ?rating,
     });
   }
 }

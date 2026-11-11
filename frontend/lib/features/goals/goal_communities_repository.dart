@@ -27,7 +27,7 @@ class GoalCommunitiesRepository {
   Future<List<GoalCommunity>> list({String? category}) async {
     final res = await _client.dio.get(
       '/goal-communities',
-      queryParameters: {if (category != null) 'category': category},
+      queryParameters: {'category': ?category},
     );
     return (res.data as List)
         .map((e) => GoalCommunity.fromJson(e as Map<String, dynamic>))

@@ -17,6 +17,12 @@ import 'features/area/area_profile_screen.dart';
 import 'features/area/saved_posts_screen.dart';
 import 'features/auth/demo_user_switcher_screen.dart';
 import 'features/blocks/blocked_accounts_screen.dart';
+import 'features/business/business_analytics_screen.dart';
+import 'features/business/business_broadcast_screen.dart';
+import 'features/business/business_catalog_screen.dart';
+import 'features/business/business_home_screen.dart';
+import 'features/business/edit_business_profile_screen.dart';
+import 'features/business/public_business_profile_screen.dart';
 import 'features/auth/otp_request_screen.dart';
 import 'features/auth/otp_verify_screen.dart';
 import 'features/auth/phone_verification.dart';
@@ -298,6 +304,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: ':jobId',
                 builder: (context, state) =>
                     JobDetailScreen(jobId: state.pathParameters['jobId']!),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'business',
+            builder: (context, state) => const BusinessHomeScreen(),
+            routes: [
+              GoRoute(path: 'edit', builder: (context, state) => const EditBusinessProfileScreen()),
+              GoRoute(path: 'catalog', builder: (context, state) => const BusinessCatalogScreen()),
+              GoRoute(path: 'broadcast', builder: (context, state) => const BusinessBroadcastScreen()),
+              GoRoute(path: 'analytics', builder: (context, state) => const BusinessAnalyticsScreen()),
+              GoRoute(
+                path: 'view/:userId',
+                builder: (context, state) =>
+                    PublicBusinessProfileScreen(userId: state.pathParameters['userId']!),
               ),
             ],
           ),

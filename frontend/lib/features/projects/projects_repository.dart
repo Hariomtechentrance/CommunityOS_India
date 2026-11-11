@@ -32,7 +32,7 @@ class ProjectsRepository {
 
   Future<ProjectUpdate> addUpdate(String projectId, {int? dayNumber, required String body}) async {
     final res = await _client.dio.post('/projects/$projectId/updates', data: {
-      if (dayNumber != null) 'dayNumber': dayNumber,
+      'dayNumber': ?dayNumber,
       'body': body,
     });
     return ProjectUpdate.fromJson(res.data as Map<String, dynamic>);
